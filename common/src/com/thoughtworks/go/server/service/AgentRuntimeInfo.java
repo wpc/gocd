@@ -296,4 +296,7 @@ public class AgentRuntimeInfo implements Serializable {
         this.agentLauncherVersion = agentLauncherVersion;
     }
 
+    public boolean isElastic() {
+        return false;
+    }
 }

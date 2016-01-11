@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- *************************GO-LICENSE-START******************************
- * Copyright 2015 ThoughtWorks, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *************************GO-LICENSE-END******************************* -->
+<!--
+  ~ Copyright 2016 ThoughtWorks, Inc.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -49,6 +49,10 @@
     <bean id="rescheduleHungBuildTask" class="com.thoughtworks.go.timer.ModeAwareMethodInvokingTimerTaskFactoryBean"
           p:targetObject-ref="scheduleService"
           p:targetMethod="rescheduleHungJobs"/>
+
+    <bean id="elasticAgentPluginPingTask" class="com.thoughtworks.go.timer.ModeAwareMethodInvokingTimerTaskFactoryBean"
+          p:targetObject-ref="elasticAgentPluginService"
+          p:targetMethod="heartbeat"/>
 
     <bean id="cancelHungJob" class="com.thoughtworks.go.timer.ModeAwareMethodInvokingTimerTaskFactoryBean"
           p:targetObject-ref="scheduleService"
@@ -113,6 +117,18 @@
                       p:delay="3000"
                       p:period="${cruise.reschedule.hung.builds.interval}"
                       p:timerTask-ref="rescheduleHungBuildTask"/>
+            </list>
+        </property>
+    </bean>
+
+    <!-- a heartbeat/ping call to elastic agent plugins -->
+    <bean name="elasticAgentPluginPingThread" class="org.springframework.scheduling.timer.TimerFactoryBean">
+        <property name="scheduledTimerTasks">
+            <list>
+                <bean class="org.springframework.scheduling.timer.ScheduledTimerTask"
+                      p:delay="3000"
+                      p:period="${cruise.elasticplugin.heartbeat.interval}"
+                      p:timerTask-ref="elasticAgentPluginPingTask"/>
             </list>
         </property>
     </bean>

@@ -1,47 +1,23 @@
-/*************************GO-LICENSE-START*********************************
- * Copyright 2014 ThoughtWorks, Inc.
+/*
+ * Copyright 2016 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *************************GO-LICENSE-END***********************************/
+ */
 
 package com.thoughtworks.go.server.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map.Entry;
-
-import com.thoughtworks.go.config.Agents;
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.PipelineConfig;
-import com.thoughtworks.go.config.PipelineNotFoundException;
-import com.thoughtworks.go.config.StageConfig;
-import com.thoughtworks.go.config.StageNotFoundException;
-import com.thoughtworks.go.domain.AgentInstance;
-import com.thoughtworks.go.domain.AgentStatus;
-import com.thoughtworks.go.domain.CannotRerunJobException;
-import com.thoughtworks.go.domain.CannotScheduleException;
-import com.thoughtworks.go.domain.DefaultSchedulingContext;
-import com.thoughtworks.go.domain.JobIdentifier;
-import com.thoughtworks.go.domain.JobInstance;
-import com.thoughtworks.go.domain.JobInstances;
-import com.thoughtworks.go.domain.JobPlan;
-import com.thoughtworks.go.domain.JobResult;
-import com.thoughtworks.go.domain.JobState;
-import com.thoughtworks.go.domain.Pipeline;
-import com.thoughtworks.go.domain.PipelineIdentifier;
-import com.thoughtworks.go.domain.SchedulingContext;
-import com.thoughtworks.go.domain.Stage;
-import com.thoughtworks.go.domain.StageIdentifier;
+import com.thoughtworks.go.config.*;
+import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.activity.AgentAssignment;
 import com.thoughtworks.go.domain.buildcause.BuildCause;
 import com.thoughtworks.go.i18n.LocalizedMessage;
@@ -77,6 +53,10 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionSynchronizationAdapter;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
+
 import static com.thoughtworks.go.util.GoConstants.DEFAULT_APPROVED_BY;
 
 @Service
@@ -109,6 +89,7 @@ public class ScheduleService {
     private PipelinePauseService pipelinePauseService;
     private InstanceFactory instanceFactory;
     private SchedulingPerformanceLogger schedulingPerformanceLogger;
+    private ElasticAgentPluginService elasticAgentPluginService;
 
     protected ScheduleService() {
     }
@@ -137,7 +118,9 @@ public class ScheduleService {
                            ConsoleActivityMonitor consoleActivityMonitor,
                            PipelinePauseService pipelinePauseService,
                            InstanceFactory instanceFactory,
-                           SchedulingPerformanceLogger schedulingPerformanceLogger) {
+                           SchedulingPerformanceLogger schedulingPerformanceLogger,
+                           ElasticAgentPluginService elasticAgentPluginService
+                           ) {
         this.goConfigService = goConfigService;
         this.pipelineService = pipelineService;
         this.stageService = stageService;
@@ -162,6 +145,7 @@ public class ScheduleService {
         this.pipelinePauseService = pipelinePauseService;
         this.instanceFactory = instanceFactory;
         this.schedulingPerformanceLogger = schedulingPerformanceLogger;
+        this.elasticAgentPluginService = elasticAgentPluginService;
     }
 
     //Note: This is called from a Spring timer

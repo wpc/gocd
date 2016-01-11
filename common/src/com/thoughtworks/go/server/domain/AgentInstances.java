@@ -1,30 +1,20 @@
-/*************************GO-LICENSE-START*********************************
- * Copyright 2014 ThoughtWorks, Inc.
+/*
+ * Copyright 2016 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *************************GO-LICENSE-END***********************************/
+ */
 
 package com.thoughtworks.go.server.domain;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.thoughtworks.go.config.AgentConfig;
 import com.thoughtworks.go.config.Agents;
@@ -35,6 +25,10 @@ import com.thoughtworks.go.domain.NullAgentInstance;
 import com.thoughtworks.go.server.service.AgentBuildingInfo;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.util.SystemEnvironment;
+import org.springframework.util.LinkedMultiValueMap;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AgentInstances implements Iterable<AgentInstance> {
 
@@ -179,12 +173,12 @@ public class AgentInstances implements Iterable<AgentInstance> {
     }
 
     private List<AgentInstance> agentsToRemove() {
-           List<AgentInstance> agentsToRemove = new ArrayList<AgentInstance>();
-           for (AgentInstance instance : this) {
-               instance.checkForRemoval(agentsToRemove);
-           }
-           return agentsToRemove;
-       }
+        List<AgentInstance> agentsToRemove = new ArrayList<AgentInstance>();
+        for (AgentInstance instance : this) {
+            instance.checkForRemoval(agentsToRemove);
+        }
+        return agentsToRemove;
+    }
 
 
     private Collection<AgentInstance> currentInstances() {
@@ -292,5 +286,19 @@ public class AgentInstances implements Iterable<AgentInstance> {
             osList.add(agentInstance.getOperatingSystem());
         }
         return osList;
+    }
+
+    public LinkedMultiValueMap<String, ElasticAgentMetadata> allElasticAgentsGroupedByPluginId() {
+        LinkedMultiValueMap<String, ElasticAgentMetadata> map = new LinkedMultiValueMap<>();
+
+        for (Map.Entry<String, AgentInstance> entry : agentInstances.entrySet()) {
+            AgentInstance agentInstance = entry.getValue();
+            if (agentInstance.isElastic()) {
+                ElasticAgentMetadata metadata = agentInstance.elasticAgentMetadata();
+                map.add(metadata.elasticPluginId(), metadata);
+            }
+        }
+
+        return map;
     }
 }
