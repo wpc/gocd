@@ -1,11 +1,11 @@
 /*
- * Copyright 2015 ThoughtWorks, Inc.
+ * Copyright 2016 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,10 +38,12 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.apache.commons.collections.CollectionUtils.disjunction;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
 
@@ -62,16 +64,18 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
     private TransactionTemplate transactionTemplate;
     private final ScheduledPipelineLoader scheduledPipelineLoader;
 
-    private List<JobPlan> jobPlans = new ArrayList<JobPlan>();
+    private List<JobPlan> jobPlans = new ArrayList<>();
     private final UpstreamPipelineResolver resolver;
     private final BuilderFactory builderFactory;
     private AgentRemoteHandler agentRemoteHandler;
+    private final ElasticAgentPluginService elasticAgentPluginService;
 
     @Autowired
     public BuildAssignmentService(GoConfigService goConfigService, JobInstanceService jobInstanceService, ScheduleService scheduleService,
                                   AgentService agentService, EnvironmentConfigService environmentConfigService, TimeProvider timeProvider,
                                   TransactionTemplate transactionTemplate, ScheduledPipelineLoader scheduledPipelineLoader, PipelineService pipelineService, BuilderFactory builderFactory,
-                                  AgentRemoteHandler agentRemoteHandler) {
+                                  AgentRemoteHandler agentRemoteHandler,
+                                  ElasticAgentPluginService elasticAgentPluginService) {
         this.goConfigService = goConfigService;
         this.jobInstanceService = jobInstanceService;
         this.scheduleService = scheduleService;
@@ -83,6 +87,7 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
         this.resolver = pipelineService;
         this.builderFactory = builderFactory;
         this.agentRemoteHandler = agentRemoteHandler;
+        this.elasticAgentPluginService = elasticAgentPluginService;
     }
 
     public void initialize() {
@@ -111,6 +116,15 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
                 Work buildWork = createWork(agent, job);
                 AgentBuildingInfo buildingInfo = new AgentBuildingInfo(job.getIdentifier().buildLocatorForDisplay(),
                         job.getIdentifier().buildLocator());
+
+                if (agent.isElastic()) {
+                    if (!elasticAgentPluginService.shouldAssignWork(agent.elasticAgentMetadata(), new Resources(job.getResources()).resourceNames(), environmentConfigService.envForPipeline(job.getPipelineName()))) {
+                        return NO_WORK;
+                    } else {
+                        elasticAgentPluginService.notifyAgentBusy(agent.elasticAgentMetadata());
+                    }
+                }
+
                 agentService.building(agent.getUuid(), buildingInfo);
                 LOGGER.info(format("[Agent Assignment] Assigned job [%s] to agent [%s]", job.getIdentifier(), agent.agentConfig().getAgentIdentifier()));
                 return buildWork;
@@ -134,7 +148,16 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
 
     private void reloadJobPlans() {
         synchronized (this) {
-            jobPlans = jobInstanceService.orderedScheduledBuilds();
+            if (jobPlans == null) {
+                jobPlans = jobInstanceService.orderedScheduledBuilds();
+                elasticAgentPluginService.createAgentsFor(jobPlans);
+            } else {
+                List<JobPlan> old = jobPlans;
+                List<JobPlan> newPlan = jobInstanceService.orderedScheduledBuilds();
+                Collection changedPlans = disjunction(old, newPlan);
+                jobPlans = newPlan;
+                elasticAgentPluginService.createAgentsFor(changedPlans);
+            }
         }
     }
 
@@ -197,7 +220,7 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
                     StageConfig stageConfig = pipelineConfig.findBy(new CaseInsensitiveString(jobPlan.getStageName()));
                     if (stageConfig != null) {
                         JobConfig jobConfig = stageConfig.jobConfigByConfigName(new CaseInsensitiveString(jobPlan.getName()));
-                        if(jobConfig == null){
+                        if (jobConfig == null) {
                             jobsToRemove.add(jobPlan);
                         }
                     } else {

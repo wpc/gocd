@@ -16,22 +16,14 @@
 
 package com.thoughtworks.go.domain;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.thoughtworks.go.config.ArtifactPlan;
-import com.thoughtworks.go.config.ArtifactPlans;
-import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
-import com.thoughtworks.go.config.ArtifactPropertiesGenerators;
-import com.thoughtworks.go.config.EnvironmentVariablesConfig;
-import com.thoughtworks.go.config.Resource;
-import com.thoughtworks.go.config.Resources;
-import com.thoughtworks.go.config.StageConfig;
-import com.thoughtworks.go.config.TestArtifactPlan;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.util.GoConstants;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.work.DefaultGoPublisher;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DefaultJobPlan implements JobPlan {
 
@@ -263,6 +255,6 @@ public class DefaultJobPlan implements JobPlan {
     }
 
     public boolean shouldCleanWorkingDir() {
-        return cleanWorkingDir;  
+        return cleanWorkingDir;
     }
 }

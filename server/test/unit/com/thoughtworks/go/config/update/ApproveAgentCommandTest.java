@@ -16,12 +16,12 @@
 
 package com.thoughtworks.go.config.update;
 
+import com.thoughtworks.go.config.AgentConfig;
 import com.thoughtworks.go.config.BasicCruiseConfig;
 import com.thoughtworks.go.config.CruiseConfig;
 import org.junit.Test;
 
 import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertThat;
 
 public class ApproveAgentCommandTest {
@@ -30,7 +30,7 @@ public class ApproveAgentCommandTest {
     public void shouldAddAnAgentToAgentsConfig() throws Exception {
         String uuid = "uuid";
         CruiseConfig cruiseConfig = new BasicCruiseConfig();
-        ApproveAgentCommand command = new ApproveAgentCommand(uuid, "remote", "8153");
+        ApproveAgentCommand command = new ApproveAgentCommand(new AgentConfig(uuid, "remote", "8153"));
 
         command.update(cruiseConfig);
 

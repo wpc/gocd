@@ -78,7 +78,11 @@ public class AgentRuntimeInfo implements Serializable {
     }
 
     public static AgentRuntimeInfo initialState(AgentConfig agentConfig) {
-        return new AgentRuntimeInfo(agentConfig.getAgentIdentifier(), AgentStatus.fromRuntime(AgentRuntimeStatus.Missing), "");
+        AgentRuntimeInfo agentRuntimeInfo = new AgentRuntimeInfo(agentConfig.getAgentIdentifier(), AgentStatus.fromRuntime(AgentRuntimeStatus.Missing), "");
+        if (agentConfig.isElastic()){
+            agentRuntimeInfo = ElasticAgentRuntimeInfo.fromServer(agentRuntimeInfo, agentConfig.getElasticAgentId(), agentConfig.getElasticPluginId());
+        }
+        return agentRuntimeInfo;
     }
 
     public void busy(AgentBuildingInfo agentBuildingInfo) {

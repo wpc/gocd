@@ -16,11 +16,7 @@
 
 package com.thoughtworks.go.util;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import static java.util.Arrays.asList;
 
@@ -102,14 +98,14 @@ public final class ListUtil {
     }
 
 
-    public interface Transformer<T, V>{
-        T transform(V obj);
+    public interface Transformer<T, V> {
+        T apply(V obj);
     }
 
-    public static <T, V> ArrayList<T> map(List<V> list, Transformer<T, V> transformer){
+    public static <T, V> Collection<T> map(Collection<V> list, Transformer<T, V> transformer) {
         ArrayList<T> transformedList = new ArrayList<>();
         for (V obj : list) {
-            transformedList.add(transformer.transform(obj));
+            transformedList.add(transformer.apply(obj));
         }
         return transformedList;
     }

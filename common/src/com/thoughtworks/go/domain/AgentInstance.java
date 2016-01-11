@@ -50,7 +50,7 @@ public class AgentInstance implements Comparable<AgentInstance> {
     private TimeProvider timeProvider;
     private SystemEnvironment systemEnvironment;
 
-    protected AgentInstance(AgentConfig agentConfig,AgentType agentType, SystemEnvironment systemEnvironment) {
+    protected AgentInstance(AgentConfig agentConfig, AgentType agentType, SystemEnvironment systemEnvironment) {
         this.systemEnvironment = systemEnvironment;
         this.agentRuntimeInfo = AgentRuntimeInfo.initialState(agentConfig);
         this.agentConfigStatus = AgentConfigStatus.Pending;
@@ -94,7 +94,6 @@ public class AgentInstance implements Comparable<AgentInstance> {
         }
     }
 
-    @Deprecated
     public void building(AgentBuildingInfo agentBuildingInfo) {
         syncStatus(AgentRuntimeStatus.Building);
         agentRuntimeInfo.busy(agentBuildingInfo);
@@ -364,6 +363,10 @@ public class AgentInstance implements Comparable<AgentInstance> {
     public ElasticAgentMetadata elasticAgentMetadata() {
         ElasticAgentRuntimeInfo runtimeInfo = (ElasticAgentRuntimeInfo) this.agentRuntimeInfo;
         return new ElasticAgentMetadata(getUuid(), runtimeInfo.getElasticAgentId(), runtimeInfo.getElasticPluginId(), this.agentRuntimeInfo.getRuntimeStatus(), getAgentConfigStatus());
+    }
+
+    public boolean canBeDeleted() {
+        return isDisabled() && !(isBuilding() || isCancelled());
     }
 
     public static enum AgentType {

@@ -714,6 +714,9 @@
                     <xsd:attribute name="ipaddress" type="xsd:string" use="required"/>
                     <xsd:attribute name="uuid" type="xsd:string" use="required"/>
                     <xsd:attribute name="isDisabled" type="xsd:boolean" use="optional"/>
+
+                    <xsd:attribute name="elasticAgentId" type="xsd:string" use="optional"/>
+                    <xsd:attribute name="elasticPluginId" type="xsd:string" use="optional"/>
                 </xsd:complexType>
             </xsd:element>
         </xsd:sequence>
