@@ -20,7 +20,9 @@ import com.google.gson.*;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class AgentMetadata {
+import java.io.Serializable;
+
+public class AgentMetadata implements Serializable {
 
     private static final Gson GSON = new GsonBuilder().
             excludeFieldsWithoutExposeAnnotation().
