@@ -21,12 +21,18 @@ import com.thoughtworks.go.server.messaging.GoMessage;
 import java.util.List;
 
 public class CreateAgentMessage implements GoMessage {
+    private final String autoregisterKey;
     private final List<String> resources;
     private final String environment;
 
-    public CreateAgentMessage(List<String> resources, String environment) {
+    public CreateAgentMessage(String autoregisterKey, List<String> resources, String environment) {
+        this.autoregisterKey = autoregisterKey;
         this.resources = resources;
         this.environment = environment;
+    }
+
+    public String autoregisterKey() {
+        return autoregisterKey;
     }
 
     public List<String> resources() {
@@ -35,5 +41,13 @@ public class CreateAgentMessage implements GoMessage {
 
     public String environment() {
         return environment;
+    }
+
+    @Override
+    public String toString() {
+        return "CreateAgentMessage{" +
+                "resources=" + resources +
+                ", environment='" + environment + '\'' +
+                '}';
     }
 }

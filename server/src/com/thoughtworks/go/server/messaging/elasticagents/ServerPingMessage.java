@@ -37,4 +37,23 @@ public class ServerPingMessage implements GoMessage {
     public Collection<AgentMetadata> agents() {
         return agents;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ServerPingMessage that = (ServerPingMessage) o;
+
+        if (!pluginId.equals(that.pluginId)) return false;
+        return agents.equals(that.agents);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = pluginId.hashCode();
+        result = 31 * result + agents.hashCode();
+        return result;
+    }
 }

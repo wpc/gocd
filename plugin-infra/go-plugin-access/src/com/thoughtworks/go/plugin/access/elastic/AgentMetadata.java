@@ -69,4 +69,38 @@ public class AgentMetadata implements Serializable {
     public JsonElement toJSON() {
         return GSON.toJsonTree(this);
     }
+
+    @Override
+    public String toString() {
+        return "AgentMetadata{" +
+                "elasticAgentId='" + elasticAgentId + '\'' +
+                ", agentState='" + agentState + '\'' +
+                ", buildState='" + buildState + '\'' +
+                ", configState='" + configState + '\'' +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AgentMetadata that = (AgentMetadata) o;
+
+        if (elasticAgentId != null ? !elasticAgentId.equals(that.elasticAgentId) : that.elasticAgentId != null)
+            return false;
+        if (agentState != null ? !agentState.equals(that.agentState) : that.agentState != null) return false;
+        if (buildState != null ? !buildState.equals(that.buildState) : that.buildState != null) return false;
+        return configState != null ? configState.equals(that.configState) : that.configState == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = elasticAgentId != null ? elasticAgentId.hashCode() : 0;
+        result = 31 * result + (agentState != null ? agentState.hashCode() : 0);
+        result = 31 * result + (buildState != null ? buildState.hashCode() : 0);
+        result = 31 * result + (configState != null ? configState.hashCode() : 0);
+        return result;
+    }
 }

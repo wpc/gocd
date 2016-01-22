@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -50,35 +51,37 @@ public class ElasticAgentPluginService implements JobStatusListener {
     private final EnvironmentConfigService environmentConfigService;
     private final CreateAgentQueue createAgentQueue;
     private final ServerPingQueue serverPingQueue;
+    private final ServerConfigService serverConfigService;
 
     @Autowired
     public ElasticAgentPluginService(
             PluginManager pluginManager, ElasticAgentPluginRegistry elasticAgentPluginRegistry,
             AgentService agentService, EnvironmentConfigService environmentConfigService,
             CreateAgentQueue createAgentQueue,
-            ServerPingQueue serverPingQueue) {
+            ServerPingQueue serverPingQueue,
+            ServerConfigService serverConfigService) {
         this.pluginManager = pluginManager;
         this.elasticAgentPluginRegistry = elasticAgentPluginRegistry;
         this.agentService = agentService;
         this.environmentConfigService = environmentConfigService;
         this.createAgentQueue = createAgentQueue;
         this.serverPingQueue = serverPingQueue;
+        this.serverConfigService = serverConfigService;
     }
 
     public void heartbeat() {
         LinkedMultiValueMap<String, ElasticAgentMetadata> elasticAgents = agentService.allElasticAgents();
-
+        Collection<AgentMetadata> agents = new ArrayList<>();
         for (PluginDescriptor descriptor : elasticAgentPluginRegistry.getPlugins()) {
-            if (!elasticAgents.containsKey(descriptor.id())) {
-                continue;
+            if (elasticAgents.containsKey(descriptor.id())) {
+                List<ElasticAgentMetadata> elasticAgentMetadatas = elasticAgents.remove(descriptor.id());
+                agents = ListUtil.map(elasticAgentMetadatas, new ListUtil.Transformer<AgentMetadata, ElasticAgentMetadata>() {
+                    @Override
+                    public AgentMetadata apply(ElasticAgentMetadata input) {
+                        return toAgentMetadata(input);
+                    }
+                });
             }
-            List<ElasticAgentMetadata> elasticAgentMetadatas = elasticAgents.remove(descriptor.id());
-            Collection<AgentMetadata> agents = ListUtil.map(elasticAgentMetadatas, new ListUtil.Transformer<AgentMetadata, ElasticAgentMetadata>() {
-                @Override
-                public AgentMetadata apply(ElasticAgentMetadata input) {
-                    return toAgentMetadata(input);
-                }
-            });
 
             serverPingQueue.post(new ServerPingMessage(descriptor.id(), agents));
         }
@@ -105,7 +108,7 @@ public class ElasticAgentPluginService implements JobStatusListener {
         for (JobPlan plan : plans) {
             List<String> resources = new Resources(plan.getResources()).resourceNames();
             String environment = environmentConfigService.envForPipeline(plan.getPipelineName());
-            createAgentQueue.post(new CreateAgentMessage(resources, environment));
+            createAgentQueue.post(new CreateAgentMessage(serverConfigService.getAutoregisterKey(), resources, environment));
         }
     }
 
