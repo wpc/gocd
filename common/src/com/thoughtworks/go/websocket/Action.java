@@ -21,5 +21,5 @@ public enum Action {
     cancelJob,
     ping,
     reregister,
-    reportCurrentStatus, reportCompleted, reportCompleting, ack, setCookie, cmd
+    reportCurrentStatus, reportCompleted, reportCompleting, ack, setCookie, cmd, result
 }

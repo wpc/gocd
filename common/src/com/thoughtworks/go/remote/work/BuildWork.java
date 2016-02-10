@@ -19,7 +19,7 @@
 package com.thoughtworks.go.remote.work;
 
 import com.thoughtworks.go.agent.CommandResult;
-import com.thoughtworks.go.agent.CommandSession;
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
 import com.thoughtworks.go.config.RunIfConfig;
 import com.thoughtworks.go.domain.*;
@@ -274,7 +274,7 @@ public class BuildWork implements Work {
     }
 
     @Override
-    public void doWork(final AgentInstance agentInstance, final CommandSession commandSession, final BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
+    public void doWork(final AgentInstance agentInstance, final RemoteBuildSession remoteBuildSession, final BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
 
         this.plan = assignment.getPlan();
         this.materialRevisions = assignment.materialRevisions();
@@ -285,20 +285,20 @@ public class BuildWork implements Work {
 
         String consoleURI = urlService.getUploadUrlOfAgent(plan.getIdentifier(), getConsoleOutputFolderAndFileNameUrl());
 
-        commandSession.start(plan.getIdentifier().buildLocator(),
+        remoteBuildSession.start(plan.getIdentifier().buildLocator(),
                 plan.getIdentifier().buildLocatorForDisplay(),
                 consoleURI,
                 new Callback<CommandResult>() {
             @Override
             public void call(CommandResult result) {
-                commandSession.export(envContext.getProperties());
-                commandSession.chdir(workingDirectory);
-                commandSession.echo("Job started.");
-                commandSession.export(); //dump env
+                remoteBuildSession.export(envContext.getProperties());
+                remoteBuildSession.chdir(workingDirectory);
+                remoteBuildSession.echo("Job started.");
+                remoteBuildSession.export(); //dump env
 
-                commandSession.end();
+                remoteBuildSession.end();
 
-                commandSession.flush(new Callback<CommandResult>() {
+                remoteBuildSession.flush(new Callback<CommandResult>() {
                     @Override
                     public void call(CommandResult result) {
                         JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;

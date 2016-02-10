@@ -16,7 +16,7 @@
 
 package com.thoughtworks.go.work;
 
-import com.thoughtworks.go.agent.CommandSession;
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
@@ -73,7 +73,7 @@ public class SleepWork implements Work {
     }
 
     @Override
-    public void doWork(AgentInstance agentInstance, CommandSession agentCommandSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
+    public void doWork(AgentInstance agentInstance, RemoteBuildSession agentRemoteBuildSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
 
     }
 }

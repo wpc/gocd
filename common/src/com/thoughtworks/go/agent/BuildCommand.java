@@ -1,9 +1,9 @@
 package com.thoughtworks.go.agent;
 
-public class AgentCommand {
+public class BuildCommand {
     private final String name;
     private final Object[] args;
-    public AgentCommand(String name, Object... args) {
+    public BuildCommand(String name, Object... args) {
         this.name = name;
         this.args = args;
     }

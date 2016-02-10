@@ -16,7 +16,7 @@
 
 package com.thoughtworks.go.remote.work;
 
-import com.thoughtworks.go.agent.CommandSession;
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.domain.exception.UnregisteredAgentException;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
@@ -53,7 +53,7 @@ public class UnregisteredAgentWork implements Work {
     }
 
     @Override
-    public void doWork(AgentInstance agentInstance, CommandSession agentCommandSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
+    public void doWork(AgentInstance agentInstance, RemoteBuildSession agentRemoteBuildSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
 
     }
 

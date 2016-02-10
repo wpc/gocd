@@ -24,7 +24,7 @@ import com.thoughtworks.go.listener.PipelineConfigChangedListener;
 import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
 import com.thoughtworks.go.remote.work.*;
-import com.thoughtworks.go.server.AgentCommandSession;
+import com.thoughtworks.go.server.AgentRemoteBuildSession;
 import com.thoughtworks.go.server.materials.StaleMaterialsOnBuildCause;
 import com.thoughtworks.go.server.service.builders.BuilderFactory;
 import com.thoughtworks.go.server.transaction.TransactionTemplate;
@@ -167,7 +167,7 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
             if (work != NO_WORK) {
 
                 work.doWork(agentInstance,
-                        new AgentCommandSession(agentInstance, agentRemoteHandler),
+                        new AgentRemoteBuildSession(agentInstance, agentRemoteHandler),
                         buildRepositoryRemote, urlService);
             }
         }

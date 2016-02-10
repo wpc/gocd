@@ -17,7 +17,6 @@
 package com.thoughtworks.go.websocket;
 
 import com.google.gson.*;
-import com.thoughtworks.go.agent.AgentCommand;
 import com.thoughtworks.go.domain.FetchHandler;
 import com.thoughtworks.go.domain.JobPlan;
 import com.thoughtworks.go.domain.MaterialInstance;

@@ -43,7 +43,10 @@ import com.thoughtworks.go.util.SystemEnvironment;
 import com.thoughtworks.go.util.SystemUtil;
 import com.thoughtworks.go.websocket.Action;
 import com.thoughtworks.go.websocket.Message;
+<<<<<<< HEAD
 import com.thoughtworks.go.websocket.MessageCallback;
+=======
+>>>>>>> rename refactoring
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -299,7 +302,7 @@ public class AgentController {
             case ack:
                 callbacks.remove(message.getData()).call();
             case cmd:
-                AgentCommand command  = (AgentCommand) message.getData();
+                BuildCommand command  = (BuildCommand) message.getData();
                 CommandResult result = buildSession.process(command);
                 websocketService.send(new Message(Action.result, result, message.getUuid()));
                 break;

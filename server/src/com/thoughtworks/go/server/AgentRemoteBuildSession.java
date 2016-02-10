@@ -1,8 +1,8 @@
 package com.thoughtworks.go.server;
 
-import com.thoughtworks.go.agent.AgentCommand;
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.CommandResult;
-import com.thoughtworks.go.agent.CommandSession;
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.remote.work.Callback;
 import com.thoughtworks.go.server.websocket.AgentRemoteHandler;
@@ -15,14 +15,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AgentCommandSession implements CommandSession {
+public class AgentRemoteBuildSession implements RemoteBuildSession {
 
     private final AgentInstance agentInstance;
     private AgentRemoteHandler agentRemoteHandler;
-    private List<AgentCommand> commands = new ArrayList<>();
+    private List<BuildCommand> commands = new ArrayList<>();
 
 
-    public AgentCommandSession(AgentInstance agentInstance, AgentRemoteHandler agentRemoteHandler) {
+    public AgentRemoteBuildSession(AgentInstance agentInstance, AgentRemoteHandler agentRemoteHandler) {
         this.agentInstance = agentInstance;
         this.agentRemoteHandler = agentRemoteHandler;
     }
@@ -33,7 +33,7 @@ public class AgentCommandSession implements CommandSession {
         sessionSettings.put("buildLocator", buildLocator);
         sessionSettings.put("buildLocatorForDisplay", buildLocatorForDisplay);
         sessionSettings.put("consoleURI", consoleURI);
-        AgentCommand cmd = new AgentCommand("start", sessionSettings);
+        BuildCommand cmd = new BuildCommand("start", sessionSettings);
         agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
                 new Message(Action.cmd, cmd),
                 new Callback<Object>() {
@@ -46,23 +46,23 @@ public class AgentCommandSession implements CommandSession {
 
     @Override
     public void export(Map<String, String> envs) {
-        commands.add(new AgentCommand("export", envs));
+        commands.add(new BuildCommand("export", envs));
     }
 
     @Override
     public void export() {
-        commands.add(new AgentCommand("export"));
+        commands.add(new BuildCommand("export"));
     }
 
     @Override
     public void chdir(File workingDirectory) {
-        commands.add(new AgentCommand("chdir", workingDirectory.getPath()));
+        commands.add(new BuildCommand("chdir", workingDirectory.getPath()));
     }
 
     @Override
     public void flush(final Callback<CommandResult> callback) {
         agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
-                new Message(Action.cmd, new AgentCommand("compose", commands.toArray())),
+                new Message(Action.cmd, new BuildCommand("compose", commands.toArray())),
                 new Callback<Object>() {
                     @Override
                     public void call(Object commandResult) {
@@ -74,11 +74,11 @@ public class AgentCommandSession implements CommandSession {
 
     @Override
     public void echo(String s) {
-        commands.add(new AgentCommand("echo", s));
+        commands.add(new BuildCommand("echo", s));
     }
 
     @Override
     public void end() {
-        commands.add(new AgentCommand("end"));
+        commands.add(new BuildCommand("end"));
     }
 }

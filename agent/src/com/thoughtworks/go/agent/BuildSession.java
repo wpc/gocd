@@ -17,7 +17,7 @@ public class BuildSession {
 
     private ConsoleOutputTransmitter console;
 
-    enum AgentCommandType {
+    enum BulidCommandType {
         start, end, echo, export, chdir, compose;
     }
 
@@ -33,8 +33,8 @@ public class BuildSession {
         this.httpService = httpService;
     }
 
-    public CommandResult process(AgentCommand command) {
-        AgentCommandType type = AgentCommandType.valueOf(command.getName());
+    public CommandResult process(BuildCommand command) {
+        BulidCommandType type = BulidCommandType.valueOf(command.getName());
         switch (type) {
             case start:
                 return start(command);
@@ -52,7 +52,7 @@ public class BuildSession {
         throw new RuntimeException("Unknown command: " + command);
     }
 
-    private CommandResult compose(AgentCommand command) {
+    private CommandResult compose(BuildCommand command) {
         CommandResult result = new CommandResult(0, "", "", agentRuntimeInfo);
         for (Object arg : command.getArgs()) {
             CommandResult childResult = process(parseArbitaryAgentCommand(arg));
@@ -65,13 +65,13 @@ public class BuildSession {
         return result;
     }
 
-    private AgentCommand parseArbitaryAgentCommand(Object obj) {
+    private BuildCommand parseArbitaryAgentCommand(Object obj) {
         Map<String, Object> attrs = (Map<String, Object>) obj;
         List args = (List) attrs.get("args");
-        return new AgentCommand((String) attrs.get("name"), args.toArray());
+        return new BuildCommand((String) attrs.get("name"), args.toArray());
     }
 
-    private CommandResult export(AgentCommand command) {
+    private CommandResult export(BuildCommand command) {
         if(command.getArgs().length > 0) {
             Map<String, String> vars = (Map<String, String>) command.getArgs()[0];
             envs.putAll(vars);
@@ -81,28 +81,28 @@ public class BuildSession {
             for (String var : envs.keySet()) {
                 list.add(String.format("export %s=%s", var, envs.get(var)));
             }
-            return process(new AgentCommand("echo", list.toArray()));
+            return process(new BuildCommand("echo", list.toArray()));
         }
     }
 
-    private CommandResult end(AgentCommand command) {
+    private CommandResult end(BuildCommand command) {
         agentRuntimeInfo.idle();
         return successResult();
     }
 
-    private CommandResult echo(AgentCommand command) {
+    private CommandResult echo(BuildCommand command) {
         for (Object line : command.getArgs()) {
             console.consumeLine(line.toString());
         }
         return successResult();
     }
 
-    private CommandResult chdir(AgentCommand command) {
+    private CommandResult chdir(BuildCommand command) {
         this.workingDir = new File((String) command.getArgs()[0]);
         return successResult();
     }
 
-    private CommandResult start(AgentCommand command) {
+    private CommandResult start(BuildCommand command) {
         Map<String, Object> settings = (Map<String, Object>) command.getArgs()[0];
         String buildLocator = (String) settings.get("buildLocator");
         String buildLocatorForDisplay = (String) settings.get("buildLocatorForDisplay");
