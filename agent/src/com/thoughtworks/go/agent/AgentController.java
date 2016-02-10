@@ -37,6 +37,7 @@ import com.thoughtworks.go.remote.work.NoWork;
 import com.thoughtworks.go.remote.work.Work;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.server.service.ElasticAgentRuntimeInfo;
+import com.thoughtworks.go.util.HttpService;
 import com.thoughtworks.go.util.SubprocessLogger;
 import com.thoughtworks.go.util.SystemEnvironment;
 import com.thoughtworks.go.util.SystemUtil;
@@ -60,6 +61,7 @@ import static com.thoughtworks.go.util.SystemUtil.currentWorkingDirectory;
 @Component
 public class AgentController {
     private static final Logger LOG = LoggerFactory.getLogger(AgentController.class);
+    private BuildSession buildSession;
 
     private BuildRepositoryRemote server;
     private GoArtifactsManipulator manipulator;
@@ -78,6 +80,7 @@ public class AgentController {
     private SCMExtension scmExtension;
     private TaskExtension taskExtension;
     private AgentWebsocketService websocketService;
+    private final HttpService httpService;
     private final AgentAutoRegistrationPropertiesImpl agentAutoRegistrationProperties;
     private final Map<String, MessageCallback> callbacks = new ConcurrentHashMap<>();
 
@@ -85,12 +88,14 @@ public class AgentController {
     public AgentController(BuildRepositoryRemote server, GoArtifactsManipulator manipulator, SslInfrastructureService sslInfrastructureService, AgentRegistry agentRegistry,
                            AgentUpgradeService agentUpgradeService, SubprocessLogger subprocessLogger, SystemEnvironment systemEnvironment,
                            PluginManager pluginManager, PackageAsRepositoryExtension packageAsRepositoryExtension, SCMExtension scmExtension, TaskExtension taskExtension,
-                           AgentWebsocketService websocketService) {
+                           AgentWebsocketService websocketService,
+                           HttpService httpService) {
         this.agentUpgradeService = agentUpgradeService;
         this.packageAsRepositoryExtension = packageAsRepositoryExtension;
         this.scmExtension = scmExtension;
         this.taskExtension = taskExtension;
         this.websocketService = websocketService;
+        this.httpService = httpService;
         ipAddress = SystemUtil.getFirstLocalNonLoopbackIpAddress();
         hostName = SystemUtil.getLocalhostNameOrRandomNameIfNotFound();
         this.server = server;
@@ -113,6 +118,8 @@ public class AgentController {
         } else {
             agentRuntimeInfo = AgentRuntimeInfo.fromAgent(identifier, AgentStatus.Idle.getRuntimeStatus(), currentWorkingDirectory(), systemEnvironment.getAgentLauncherVersion());
         }
+
+        this.buildSession = new BuildSession(agentRuntimeInfo, systemEnvironment, httpService);
 
         subprocessLogger.registerAsExitHook("Following processes were alive at shutdown: ");
     }
@@ -291,10 +298,13 @@ public class AgentController {
                 break;
             case ack:
                 callbacks.remove(message.getData()).call();
+            case cmd:
+                AgentCommand command  = (AgentCommand) message.getData();
+                CommandResult result = buildSession.process(command);
+                websocketService.send(new Message(Action.result, result, message.getUuid()));
                 break;
             default:
                 throw new RuntimeException("Unknown action: " + message.getAction());
-
         }
     }
 

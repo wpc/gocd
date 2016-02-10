@@ -1,21 +1,25 @@
-/*************************GO-LICENSE-START*********************************
+/*************************
+ * GO-LICENSE-START*********************************
  * Copyright 2014 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *************************GO-LICENSE-END***********************************/
+ * ************************GO-LICENSE-END
+ ***********************************/
 
 package com.thoughtworks.go.remote.work;
 
+import com.thoughtworks.go.agent.CommandResult;
+import com.thoughtworks.go.agent.CommandSession;
 import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
 import com.thoughtworks.go.config.RunIfConfig;
 import com.thoughtworks.go.domain.*;
@@ -31,7 +35,11 @@ import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.util.ProcessManager;
 import com.thoughtworks.go.util.SystemEnvironment;
 import com.thoughtworks.go.util.TimeProvider;
-import com.thoughtworks.go.util.command.*;
+import com.thoughtworks.go.util.URLService;
+import com.thoughtworks.go.util.command.EnvironmentVariableContext;
+import com.thoughtworks.go.util.command.PasswordArgument;
+import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
+import com.thoughtworks.go.util.command.SafeOutputStreamConsumer;
 import com.thoughtworks.go.work.DefaultGoPublisher;
 import com.thoughtworks.go.work.GoPublisher;
 import org.apache.commons.io.FileUtils;
@@ -47,6 +55,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
+import static com.thoughtworks.go.util.ArtifactLogUtil.getConsoleOutputFolderAndFileNameUrl;
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 import static com.thoughtworks.go.util.ExceptionUtils.messageOf;
 import static java.lang.String.format;
@@ -101,10 +110,9 @@ public class BuildWork implements Work {
     }
 
     private void reportFailure(Exception e) {
-        try{
+        try {
             goPublisher.reportErrorMessage(messageOf(e), e);
-        }
-        catch (Exception reportException) {
+        } catch (Exception reportException) {
             LOGGER.error(format("Unable to report error message - %s.", messageOf(e)), reportException);
         }
         reportCompletion(JobResult.Failed);
@@ -196,7 +204,7 @@ public class BuildWork implements Work {
 
     private EnvironmentVariableContext setupEnvrionmentContext(EnvironmentVariableContext context) {
         context.setProperty("GO_SERVER_URL", new SystemEnvironment().getPropertyImpl("serviceUrl"), false);
-        context.setProperty("GO_TRIGGER_USER", assignment.getBuildApprover() , false);
+        context.setProperty("GO_TRIGGER_USER", assignment.getBuildApprover(), false);
         plan.getIdentifier().populateEnvironmentVariables(context);
         materialRevisions.populateEnvironmentVariables(context, workingDirectory);
         return context;
@@ -263,6 +271,43 @@ public class BuildWork implements Work {
     public void cancel(EnvironmentVariableContext environmentVariableContext, AgentRuntimeInfo agentruntimeInfo) {
         agentruntimeInfo.cancel();
         builders.cancel(environmentVariableContext);
+    }
+
+    @Override
+    public void doWork(final AgentInstance agentInstance, final CommandSession commandSession, final BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
+
+        this.plan = assignment.getPlan();
+        this.materialRevisions = assignment.materialRevisions();
+        this.workingDirectory = assignment.getWorkingDirectory();
+        final EnvironmentVariableContext envContext = assignment.initialEnvironmentVariableContext();
+        setupEnvrionmentContext(envContext);
+        plan.applyTo(envContext);
+
+        String consoleURI = urlService.getUploadUrlOfAgent(plan.getIdentifier(), getConsoleOutputFolderAndFileNameUrl());
+
+        commandSession.start(plan.getIdentifier().buildLocator(),
+                plan.getIdentifier().buildLocatorForDisplay(),
+                consoleURI,
+                new Callback<CommandResult>() {
+            @Override
+            public void call(CommandResult result) {
+                commandSession.export(envContext.getProperties());
+                commandSession.chdir(workingDirectory);
+                commandSession.echo("Job started.");
+                commandSession.export(); //dump env
+
+                commandSession.end();
+
+                commandSession.flush(new Callback<CommandResult>() {
+                    @Override
+                    public void call(CommandResult result) {
+                        JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;
+                        buildRepositoryRemote.reportCompleted(result.getAgentRuntimeInfo(), assignment.getPlan().getIdentifier(), jobResult);
+                    }
+                });
+            }
+        });
+
     }
 
     // only for test

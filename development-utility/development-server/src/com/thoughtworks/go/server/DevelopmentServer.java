@@ -54,6 +54,7 @@ public class DevelopmentServer {
 
         systemEnvironment.set(SystemEnvironment.DEFAULT_PLUGINS_ZIP, "/plugins.zip");
         systemEnvironment.setProperty(GoConstants.I18N_CACHE_LIFE, "0"); //0 means reload when stale
+        systemEnvironment.setProperty("serviceUrl", "https://localhost:8154/go");
         setupPeriodicGC(systemEnvironment);
         File pluginsDist = new File("../tw-go-plugins/dist/");
         if (!pluginsDist.exists()) {

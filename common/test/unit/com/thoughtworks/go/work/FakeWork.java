@@ -16,6 +16,8 @@
 
 package com.thoughtworks.go.work;
 
+import com.thoughtworks.go.agent.CommandSession;
+import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
@@ -23,6 +25,7 @@ import com.thoughtworks.go.remote.work.Work;
 import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
 import com.thoughtworks.go.publishers.GoArtifactsManipulator;
+import com.thoughtworks.go.util.URLService;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 
@@ -40,6 +43,11 @@ public class FakeWork implements Work {
 
     public void cancel(EnvironmentVariableContext environmentVariableContext, AgentRuntimeInfo agentruntimeInfo) {
         callCount++;
+    }
+
+    @Override
+    public void doWork(AgentInstance agentInstance, CommandSession agentCommandSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
+
     }
 
     public int getCallCount() {

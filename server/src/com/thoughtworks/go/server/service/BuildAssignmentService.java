@@ -22,12 +22,15 @@ import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.builder.Builder;
 import com.thoughtworks.go.listener.PipelineConfigChangedListener;
 import com.thoughtworks.go.remote.AgentIdentifier;
+import com.thoughtworks.go.remote.BuildRepositoryRemote;
 import com.thoughtworks.go.remote.work.*;
+import com.thoughtworks.go.server.AgentCommandSession;
 import com.thoughtworks.go.server.materials.StaleMaterialsOnBuildCause;
 import com.thoughtworks.go.server.service.builders.BuilderFactory;
 import com.thoughtworks.go.server.transaction.TransactionTemplate;
 import com.thoughtworks.go.server.websocket.Agent;
 import com.thoughtworks.go.server.websocket.AgentRemoteHandler;
+import com.thoughtworks.go.util.URLService;
 import com.thoughtworks.go.websocket.Action;
 import com.thoughtworks.go.websocket.Message;
 import org.apache.commons.collections.Closure;
@@ -65,12 +68,14 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
     private final UpstreamPipelineResolver resolver;
     private final BuilderFactory builderFactory;
     private AgentRemoteHandler agentRemoteHandler;
+    private BuildRepositoryRemote buildRepositoryRemote;
+    private URLService urlService;
 
     @Autowired
     public BuildAssignmentService(GoConfigService goConfigService, JobInstanceService jobInstanceService, ScheduleService scheduleService,
                                   AgentService agentService, EnvironmentConfigService environmentConfigService,
                                   TransactionTemplate transactionTemplate, ScheduledPipelineLoader scheduledPipelineLoader, PipelineService pipelineService, BuilderFactory builderFactory,
-                                  AgentRemoteHandler agentRemoteHandler) {
+                                  AgentRemoteHandler agentRemoteHandler, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
         this.goConfigService = goConfigService;
         this.jobInstanceService = jobInstanceService;
         this.scheduleService = scheduleService;
@@ -81,6 +86,8 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
         this.resolver = pipelineService;
         this.builderFactory = builderFactory;
         this.agentRemoteHandler = agentRemoteHandler;
+        this.buildRepositoryRemote = buildRepositoryRemote;
+        this.urlService = urlService;
     }
 
     public void initialize() {
@@ -158,7 +165,10 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
             }
             Work work = assignWorkToAgent(agentInstance);
             if (work != NO_WORK) {
-                agent.send(new Message(Action.assignWork, work));
+
+                work.doWork(agentInstance,
+                        new AgentCommandSession(agentInstance, agentRemoteHandler),
+                        buildRepositoryRemote, urlService);
             }
         }
         if (LOGGER.isDebugEnabled()) {
@@ -195,7 +205,7 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
                     StageConfig stageConfig = pipelineConfig.findBy(new CaseInsensitiveString(jobPlan.getStageName()));
                     if (stageConfig != null) {
                         JobConfig jobConfig = stageConfig.jobConfigByConfigName(new CaseInsensitiveString(jobPlan.getName()));
-                        if(jobConfig == null){
+                        if (jobConfig == null) {
                             jobsToRemove.add(jobPlan);
                         }
                     } else {

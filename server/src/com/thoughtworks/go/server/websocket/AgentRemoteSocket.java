@@ -15,6 +15,9 @@
  */
 package com.thoughtworks.go.server.websocket;
 
+import com.thoughtworks.go.agent.AgentCommand;
+import com.thoughtworks.go.remote.work.Callback;
+import com.thoughtworks.go.websocket.Action;
 import com.thoughtworks.go.websocket.Message;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
@@ -69,6 +72,7 @@ public class AgentRemoteSocket implements Agent {
         LOGGER.debug("{} send message: {}", sessionName(), msg);
         session.getRemote().sendBytesByFuture(ByteBuffer.wrap(Message.encode(msg)));
     }
+
 
     private String sessionName() {
         return session == null ? "[No session initialized]" : "Session[" + session.getRemoteAddress() + "]";

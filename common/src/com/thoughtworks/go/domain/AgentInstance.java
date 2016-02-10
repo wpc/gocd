@@ -40,6 +40,11 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 public class AgentInstance implements Comparable<AgentInstance> {
     private AgentType agentType;
     protected AgentConfig agentConfig;
+
+    public AgentRuntimeInfo getAgentRuntimeInfo() {
+        return agentRuntimeInfo;
+    }
+
     protected AgentRuntimeInfo agentRuntimeInfo;
 
     private AgentConfigStatus agentConfigStatus;

@@ -19,6 +19,7 @@ package com.thoughtworks.go.server.websocket;
 import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.remote.AgentInstruction;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
+import com.thoughtworks.go.remote.work.Callback;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.server.service.AgentService;
 import com.thoughtworks.go.websocket.Action;
@@ -39,6 +40,7 @@ public class AgentRemoteHandler {
     private Map<Agent, String> sessionIds = new ConcurrentHashMap<>();
     private Map<Agent, String> agentCookie = new ConcurrentHashMap<>();
     private Map<String, Agent> agentSessions = new ConcurrentHashMap<>();
+    private Map<String, Map<String, Callback<Object>>> agentToCallbacks = new ConcurrentHashMap<>();
 
     @Qualifier("buildRepositoryMessageProducer")
     @Autowired
@@ -97,10 +99,24 @@ public class AgentRemoteHandler {
                 report = (Report) msg.getData();
                 buildRepositoryRemote.reportCompleted(report.getAgentRuntimeInfo(), report.getJobIdentifier(), report.getResult());
                 break;
+            case result:
+                String agentUUID = sessionIds.get(agent);
+                Map<String, Callback<Object>> callbacks = agentToCallbacks.get(agentUUID);
+                if(callbacks != null) {
+                    String forMsgUUID = msg.getAssociatedMessageUUID();
+                    Callback<Object> callback = callbacks.get(forMsgUUID);
+                    if(callback != null) {
+                        callback.call(msg.getData());
+                    }
+                }
+                break;
+
             default:
                 throw new RuntimeException("Unknown action: " + msg.getAction());
         }
     }
+
+
 
     public void remove(Agent agent) {
         agentCookie.remove(agent);
@@ -128,5 +144,16 @@ public class AgentRemoteHandler {
         if (agent != null) {
             agent.send(new Message(Action.cancelJob));
         }
+    }
+
+    public void sendMessageWithCallback(String uuid, Message msg, Callback<Object> callback) {
+        Agent agent = agentSessions.get(uuid);
+        if (agent != null) {
+            this.agentToCallbacks.putIfAbsent(uuid, new ConcurrentHashMap<String, Callback<Object>>());
+            Map<String, Callback<Object>> callbacks = agentToCallbacks.get(uuid);
+            callbacks.put(msg.getUuid(), callback);
+            agent.send(msg);
+        }
+
     }
 }
