@@ -20,19 +20,22 @@
         <user>operate</user>
       </admins>
     </authorization>
-    <pipeline name="up42">
+    <pipeline name="test" isLocked="false">
       <materials>
-        <hg url="../manual-testing/ant_hg/dummy" dest="dest_dir" materialName="dummyhg" />
+        <git url="/Users/xli/code/gotest" />
       </materials>
-      <stage name="up42_stage">
+      <stage name="defaultStage">
         <jobs>
-          <job name="up42_job">
+          <job name="defaultJob">
             <tasks>
-              <exec command="ls" />
+              <rake />
             </tasks>
           </job>
         </jobs>
       </stage>
     </pipeline>
   </pipelines>
+  <agents>
+    <agent hostname="xiao.local" ipaddress="10.19.22.168" uuid="b082e50d-4023-4913-b9a1-76c1651e53ad" />
+  </agents>
 </cruise>

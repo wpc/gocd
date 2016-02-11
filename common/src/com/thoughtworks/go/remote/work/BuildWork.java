@@ -303,7 +303,6 @@ public class BuildWork implements Work {
 
                 remoteBuildSession.echo("Start to update materials.\n");
 
-
                 for (MaterialRevision revision : materialRevisions.getRevisions()) {
                     revision.getMaterial().updateTo(remoteBuildSession, revision.getRevision(), workingDirectory);
                 }

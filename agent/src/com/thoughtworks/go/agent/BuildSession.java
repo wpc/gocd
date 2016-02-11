@@ -24,7 +24,7 @@ public class BuildSession {
     private ConsoleOutputTransmitter console;
 
     enum BulidCommandType {
-        start, end, echo, export, compose, exec;
+        start, end, echo, export, compose, exec, test;
     }
 
     private File workingDir;
@@ -43,6 +43,13 @@ public class BuildSession {
         LOG.info("Processing build command {}", command);
         try {
             BulidCommandType type = BulidCommandType.valueOf(command.getName());
+            BuildCommand.Test test = command.getTest();
+            if(test != null) {
+                CommandResult testResult = process(test.command);
+                if(testResult.isSuccess() != test.expectation) {
+                    return new CommandResult(0, agentRuntimeInfo);
+                }
+            }
             switch (type) {
                 case start:
                     return start(command);
@@ -54,6 +61,8 @@ public class BuildSession {
                     return export(command);
                 case exec:
                     return exec(command);
+                case test:
+                    return test(command);
                 case end:
                     return end(command);
                 default:
@@ -66,9 +75,18 @@ public class BuildSession {
         }
     }
 
+    private CommandResult test(BuildCommand command) {
+        boolean success = false;
+        if(command.getArgs()[0].equals("-d")) {
+            success = new File((String) command.getArgs()[1]).isDirectory();
+        }
+        return new CommandResult(success ? 0 : 1, agentRuntimeInfo);
+    }
+
     private CommandResult exec(BuildCommand command) {
         String execCommand = (String) command.getArgs()[0];
         CommandLine commandLine = CommandLine.createCommandLine(execCommand);
+
         if(command.getWorkingDirectory() != null) {
             commandLine.withWorkingDir(new File(command.getWorkingDirectory()));
         }
@@ -83,8 +101,8 @@ public class BuildSession {
 
     private CommandResult compose(BuildCommand command) {
         CommandResult result = new CommandResult(0, agentRuntimeInfo);
-        for (Object arg : command.getArgs()) {
-            CommandResult childResult = process(parseArbitaryAgentCommand(arg));
+        for (BuildCommand arg : command.getSubCommands()) {
+            CommandResult childResult = process(arg);
             result.addChild(childResult);
             if(!childResult.isSuccess()) {
                 result.setExitCode(1);
@@ -92,14 +110,6 @@ public class BuildSession {
             }
         }
         return result;
-    }
-
-    private BuildCommand parseArbitaryAgentCommand(Object obj) {
-        Map<String, Object> attrs = (Map<String, Object>) obj;
-        List args = (List) attrs.get("args");
-        BuildCommand cmd = new BuildCommand((String) attrs.get("name"), args.toArray());
-        cmd.setWorkingDirectory((String) attrs.get("workingDirectory"));
-        return cmd;
     }
 
     private CommandResult export(BuildCommand command) {
@@ -112,7 +122,7 @@ public class BuildSession {
             for (String var : envs.keySet()) {
                 list.add(String.format("export %s=%s", var, envs.get(var)));
             }
-            return process(new BuildCommand("echo", list.toArray()));
+            return process(new BuildCommand("echo", list.toArray(new String[list.size()])));
         }
     }
 

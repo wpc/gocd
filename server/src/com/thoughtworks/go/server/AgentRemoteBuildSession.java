@@ -4,13 +4,11 @@ import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.CommandResult;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.domain.AgentInstance;
-import com.thoughtworks.go.remote.work.BuildWork;
 import com.thoughtworks.go.remote.work.Callback;
 import com.thoughtworks.go.server.websocket.AgentRemoteHandler;
 import com.thoughtworks.go.websocket.Action;
 import com.thoughtworks.go.websocket.Message;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +28,7 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
 
     @Override
     public void start(String buildLocator, String buildLocatorForDisplay, String consoleURI, final Callback<CommandResult> callback) {
-        HashMap<String, Object> sessionSettings = new HashMap<>();
+        Map<String, Object> sessionSettings = new HashMap<>();
         sessionSettings.put("buildLocator", buildLocator);
         sessionSettings.put("buildLocatorForDisplay", buildLocatorForDisplay);
         sessionSettings.put("consoleURI", consoleURI);
@@ -57,8 +55,10 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
 
   @Override
     public void flush(final Callback<CommandResult> callback) {
-        agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
-                new Message(Action.cmd, new BuildCommand("compose", commands.toArray())),
+      BuildCommand compose = new BuildCommand("compose");
+      compose.setSubCommands(commands.toArray(new BuildCommand[commands.size()]));
+      agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
+                new Message(Action.cmd, compose),
                 new Callback<Object>() {
                     @Override
                     public void call(Object commandResult) {

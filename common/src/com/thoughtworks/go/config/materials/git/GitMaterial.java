@@ -168,7 +168,9 @@ public class GitMaterial extends ScmMaterial {
     public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
         remoteBuildSession.echo(format("[%s] Start updating %s at revision %s from %s", GoConstants.PRODUCT_NAME, updatingTarget(), revision.getRevision(), url));
         File destDir = workingdir(baseDir);
-        remoteBuildSession.addCommand(remoteGit(new File("./"), "clone",  "--depth=2", "-n", "--branch=" + branch, url.forCommandline(), destDir.getPath()));
+        BuildCommand clone = remoteGit(new File("./"), "clone", "--depth=2", "-n", "--branch=" + branch, url.forCommandline(), destDir.getPath());
+        clone.setTest(new BuildCommand("test", "-d", new File(destDir, ".git").getPath()), false);
+        remoteBuildSession.addCommand(clone);
 
         remoteBuildSession.echo(String.format("[GIT] Fetch and reset in working directory %s", baseDir));
         remoteBuildSession.echo("[GIT] Cleaning all unversioned files in working copy");
