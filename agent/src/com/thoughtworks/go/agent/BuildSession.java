@@ -6,19 +6,25 @@ import com.thoughtworks.go.server.service.AgentBuildingInfo;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.util.HttpService;
 import com.thoughtworks.go.util.SystemEnvironment;
+import com.thoughtworks.go.util.command.CommandLine;
+import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
+import com.thoughtworks.go.util.command.StringArgument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 
 public class BuildSession {
+    private static final Logger LOG = LoggerFactory.getLogger(BuildSession.class);
+
 
     private ConsoleOutputTransmitter console;
 
     enum BulidCommandType {
-        start, end, echo, export, chdir, compose;
+        start, end, echo, export, compose, exec;
     }
 
     private File workingDir;
@@ -34,26 +40,49 @@ public class BuildSession {
     }
 
     public CommandResult process(BuildCommand command) {
-        BulidCommandType type = BulidCommandType.valueOf(command.getName());
-        switch (type) {
-            case start:
-                return start(command);
-            case compose:
-                return compose(command);
-            case chdir:
-                return chdir(command);
-            case echo:
-                return echo(command);
-            case export:
-                return export(command);
-            case end:
-                return end(command);
+        LOG.info("Processing build command {}", command);
+        try {
+            BulidCommandType type = BulidCommandType.valueOf(command.getName());
+            switch (type) {
+                case start:
+                    return start(command);
+                case compose:
+                    return compose(command);
+                case echo:
+                    return echo(command);
+                case export:
+                    return export(command);
+                case exec:
+                    return exec(command);
+                case end:
+                    return end(command);
+                default:
+                    return new CommandResult(1, agentRuntimeInfo, "Unknown command: " + command.toString());
+            }
+        } catch (RuntimeException e) {
+            LOG.error("Processing error: ", e);
+            agentRuntimeInfo.idle();
+            return new CommandResult(1, agentRuntimeInfo, e.getClass().getName() + ": " + e.getMessage());
         }
-        throw new RuntimeException("Unknown command: " + command);
+    }
+
+    private CommandResult exec(BuildCommand command) {
+        String execCommand = (String) command.getArgs()[0];
+        CommandLine commandLine = CommandLine.createCommandLine(execCommand);
+        if(command.getWorkingDirectory() != null) {
+            commandLine.withWorkingDir(new File(command.getWorkingDirectory()));
+        }
+
+        for (int i = 1; i < command.getArgs().length; i++) {
+            commandLine.withArg(new StringArgument(command.getArgs()[i].toString()));
+        }
+
+        int exitCode = commandLine.run(new ProcessOutputStreamConsumer<>(console, console), agentRuntimeInfo.getUUId());
+        return new CommandResult(exitCode, agentRuntimeInfo);
     }
 
     private CommandResult compose(BuildCommand command) {
-        CommandResult result = new CommandResult(0, "", "", agentRuntimeInfo);
+        CommandResult result = new CommandResult(0, agentRuntimeInfo);
         for (Object arg : command.getArgs()) {
             CommandResult childResult = process(parseArbitaryAgentCommand(arg));
             result.addChild(childResult);
@@ -68,7 +97,9 @@ public class BuildSession {
     private BuildCommand parseArbitaryAgentCommand(Object obj) {
         Map<String, Object> attrs = (Map<String, Object>) obj;
         List args = (List) attrs.get("args");
-        return new BuildCommand((String) attrs.get("name"), args.toArray());
+        BuildCommand cmd = new BuildCommand((String) attrs.get("name"), args.toArray());
+        cmd.setWorkingDirectory((String) attrs.get("workingDirectory"));
+        return cmd;
     }
 
     private CommandResult export(BuildCommand command) {
@@ -97,11 +128,6 @@ public class BuildSession {
         return successResult();
     }
 
-    private CommandResult chdir(BuildCommand command) {
-        this.workingDir = new File((String) command.getArgs()[0]);
-        return successResult();
-    }
-
     private CommandResult start(BuildCommand command) {
         Map<String, Object> settings = (Map<String, Object>) command.getArgs()[0];
         String buildLocator = (String) settings.get("buildLocator");
@@ -112,10 +138,11 @@ public class BuildSession {
         this.envs = new HashMap<>();
         console = new ConsoleOutputTransmitter(
                 new RemoteConsoleAppender(consoleURI, httpService, agentRuntimeInfo.getIdentifier()));
+        this.workingDir = new File("./");
         return successResult();
     }
 
     private CommandResult successResult() {
-        return new CommandResult(0, "", "", agentRuntimeInfo);
+        return new CommandResult(0, agentRuntimeInfo);
     }
 }

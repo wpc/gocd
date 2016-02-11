@@ -18,6 +18,7 @@
 
 package com.thoughtworks.go.remote.work;
 
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.CommandResult;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
@@ -274,7 +275,7 @@ public class BuildWork implements Work {
     }
 
     @Override
-    public void doWork(final AgentInstance agentInstance, final RemoteBuildSession remoteBuildSession, final BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
+    public void doWork(final RemoteBuildSession remoteBuildSession, final BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
 
         this.plan = assignment.getPlan();
         this.materialRevisions = assignment.materialRevisions();
@@ -292,17 +293,31 @@ public class BuildWork implements Work {
             @Override
             public void call(CommandResult result) {
                 remoteBuildSession.export(envContext.getProperties());
-                remoteBuildSession.chdir(workingDirectory);
-                remoteBuildSession.echo("Job started.");
-                remoteBuildSession.export(); //dump env
 
-                remoteBuildSession.end();
+                remoteBuildSession.echo("Job started.");
+                remoteBuildSession.echo("Start to prepare");
+
+                if (!plan.shouldFetchMaterials()) {
+                    remoteBuildSession.echo("Skipping material update since stage is configured not to fetch materials");
+                }
+
+                remoteBuildSession.echo("Start to update materials.\n");
+
+
+                for (MaterialRevision revision : materialRevisions.getRevisions()) {
+                    revision.getMaterial().updateTo(remoteBuildSession, revision.getRevision(), workingDirectory);
+                }
+                remoteBuildSession.export(); //dump env
 
                 remoteBuildSession.flush(new Callback<CommandResult>() {
                     @Override
                     public void call(CommandResult result) {
-                        JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;
-                        buildRepositoryRemote.reportCompleted(result.getAgentRuntimeInfo(), assignment.getPlan().getIdentifier(), jobResult);
+                        try {
+                            JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;
+                            buildRepositoryRemote.reportCompleted(result.getAgentRuntimeInfo(), assignment.getPlan().getIdentifier(), jobResult);
+                        } finally {
+                            remoteBuildSession.end();
+                        }
                     }
                 });
             }

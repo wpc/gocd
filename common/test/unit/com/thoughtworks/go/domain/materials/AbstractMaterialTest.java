@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.domain.materials;
 
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.config.materials.AbstractMaterial;
 import com.thoughtworks.go.config.materials.SubprocessExecutionContext;
@@ -65,6 +66,11 @@ public class AbstractMaterialTest {
         }
 
         public void updateTo(ProcessOutputStreamConsumer outputStreamConsumer, File baseDir, RevisionContext revisionContext, final SubprocessExecutionContext execCtx) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
             throw new UnsupportedOperationException();
         }
 

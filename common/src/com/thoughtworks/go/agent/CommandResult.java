@@ -8,28 +8,22 @@ public class CommandResult {
 
     private final ArrayList<CommandResult> children;
     private int exitCode;
-    private final String stdout;
-    private final String stderr;
     private AgentRuntimeInfo agentRuntimeInfo;
+    private String error;
 
-    public CommandResult(int exitCode, String stdout, String stderr, AgentRuntimeInfo agentRuntimeInfo) {
+    public CommandResult(int exitCode, AgentRuntimeInfo agentRuntimeInfo) {
+        this(exitCode, agentRuntimeInfo, null);
+    }
+
+    public CommandResult(int exitCode, AgentRuntimeInfo agentRuntimeInfo, String error) {
         this.exitCode = exitCode;
-        this.stdout = stdout;
-        this.stderr = stderr;
         this.agentRuntimeInfo = agentRuntimeInfo;
+        this.error = error;
         this.children = new ArrayList<>();
     }
 
     public boolean isSuccess() {
         return exitCode == 0;
-    }
-
-    public String getStdout() {
-        return stdout;
-    }
-
-    public String getStderr() {
-        return stderr;
     }
 
     public AgentRuntimeInfo getAgentRuntimeInfo() {
@@ -42,5 +36,18 @@ public class CommandResult {
 
     public void addChild(CommandResult childResult) {
         children.add(childResult);
+    }
+
+    @Override
+    public String toString() {
+        return "CommandResult{" +
+                "children=" + children +
+                ", exitCode=" + exitCode +
+                ", error='" + error + '\'' +
+                '}';
+    }
+
+    public String getError() {
+        return error;
     }
 }

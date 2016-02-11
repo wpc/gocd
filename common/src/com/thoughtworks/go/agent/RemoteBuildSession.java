@@ -9,8 +9,8 @@ public interface RemoteBuildSession {
     void start(String buildLocator, String buildLocatorForDisplay, String consoleURI, Callback<CommandResult> callback);
     void export(Map<String, String> envs);
     void export();
-    void chdir(File workingDirectory);
     void flush(Callback<CommandResult> callback);
     void echo(String s);
     void end();
+    void addCommand(BuildCommand command);
 }

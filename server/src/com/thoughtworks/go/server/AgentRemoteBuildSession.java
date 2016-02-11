@@ -4,6 +4,7 @@ import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.CommandResult;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.domain.AgentInstance;
+import com.thoughtworks.go.remote.work.BuildWork;
 import com.thoughtworks.go.remote.work.Callback;
 import com.thoughtworks.go.server.websocket.AgentRemoteHandler;
 import com.thoughtworks.go.websocket.Action;
@@ -54,12 +55,7 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
         commands.add(new BuildCommand("export"));
     }
 
-    @Override
-    public void chdir(File workingDirectory) {
-        commands.add(new BuildCommand("chdir", workingDirectory.getPath()));
-    }
-
-    @Override
+  @Override
     public void flush(final Callback<CommandResult> callback) {
         agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
                 new Message(Action.cmd, new BuildCommand("compose", commands.toArray())),
@@ -79,6 +75,21 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
 
     @Override
     public void end() {
+        if(commands.size() > 0) {
+            throw new RuntimeException("should not end build session when there are commands on fly, use flush callback");
+        }
         commands.add(new BuildCommand("end"));
+        flush(new Callback<CommandResult>() {
+            @Override
+            public void call(CommandResult result) {
+                //do nothing
+            }
+        });
+    }
+
+
+    @Override
+    public void addCommand(BuildCommand command) {
+        commands.add(command);
     }
 }

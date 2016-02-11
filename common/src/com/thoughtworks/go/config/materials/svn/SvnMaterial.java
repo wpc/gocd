@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.config.materials.svn;
 
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.PasswordEncrypter;
 import com.thoughtworks.go.config.materials.PasswordAwareMaterial;
 import com.thoughtworks.go.config.materials.ScmMaterial;
@@ -151,7 +152,6 @@ public class SvnMaterial extends ScmMaterial implements PasswordEncrypter, Passw
         LOGGER.debug("done with update");
         outputStreamConsumer.stdOutput(format("[%s] Done.\n", GoConstants.PRODUCT_NAME));
     }
-
     public boolean isRepositoryChanged(File workingFolder) {
         try {
             File file = new File(workingFolder, ".svn");

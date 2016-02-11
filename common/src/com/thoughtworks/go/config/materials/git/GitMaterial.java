@@ -16,6 +16,8 @@
 
 package com.thoughtworks.go.config.materials.git;
 
+import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.materials.ScmMaterial;
 import com.thoughtworks.go.config.materials.ScmMaterialConfig;
 import com.thoughtworks.go.config.materials.SubprocessExecutionContext;
@@ -151,6 +153,36 @@ public class GitMaterial extends ScmMaterial {
         } catch (Exception e) {
             bomb(e);
         }
+    }
+
+    private BuildCommand remoteGit(File workingdir, String...args) {
+        String[] f = new String[args.length + 1];
+        f[0] = "git";
+        System.arraycopy(args, 0, f, 1, args.length);
+        BuildCommand command = new BuildCommand("exec", f);
+        command.setWorkingDirectory(workingdir.getPath());
+        return command;
+    }
+
+    @Override
+    public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
+        remoteBuildSession.echo(format("[%s] Start updating %s at revision %s from %s", GoConstants.PRODUCT_NAME, updatingTarget(), revision.getRevision(), url));
+        File destDir = workingdir(baseDir);
+        remoteBuildSession.addCommand(remoteGit(new File("./"), "clone",  "--depth=2", "-n", "--branch=" + branch, url.forCommandline(), destDir.getPath()));
+
+        remoteBuildSession.echo(String.format("[GIT] Fetch and reset in working directory %s", baseDir));
+        remoteBuildSession.echo("[GIT] Cleaning all unversioned files in working copy");
+        remoteBuildSession.addCommand(remoteGit(destDir, "clean", "-df"));
+
+        remoteBuildSession.echo("[GIT] Fetching changes");
+        remoteBuildSession.addCommand(remoteGit(destDir, "fetch", "origin"));
+
+        //todo: removeSubmoduleSectionsFromGitConfig
+        remoteBuildSession.echo("[GIT] Performing git gc");
+        remoteBuildSession.addCommand(remoteGit(destDir, "gc", "--auto"));
+
+        remoteBuildSession.echo("[GIT] Updating working copy to revision " + revision.getRevision());
+        remoteBuildSession.addCommand(remoteGit(destDir, "reset", "--hard", revision.getRevision()));
     }
 
     public ValidationBean checkConnection(final SubprocessExecutionContext execCtx) {

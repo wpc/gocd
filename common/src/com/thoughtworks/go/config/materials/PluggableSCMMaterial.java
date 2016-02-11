@@ -18,6 +18,7 @@ package com.thoughtworks.go.config.materials;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.domain.MaterialInstance;
@@ -156,6 +157,11 @@ public class PluggableSCMMaterial extends AbstractMaterial {
 
     @Override
     public void updateTo(ProcessOutputStreamConsumer outputStreamConsumer, File baseDir, RevisionContext revisionContext, SubprocessExecutionContext execCtx) {
+        // do nothing. used in tests.
+    }
+
+    @Override
+    public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
         // do nothing. used in tests.
     }
 

@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.config.materials.dependency;
 
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.FetchTask;
 import com.thoughtworks.go.config.PipelineConfig;
@@ -91,6 +92,11 @@ public class DependencyMaterial extends AbstractMaterial {
     //Unused (legacy) methods
 
     public void updateTo(ProcessOutputStreamConsumer outputStreamConsumer, File baseDir, RevisionContext revisionContext, final SubprocessExecutionContext execCtx) {
+
+    }
+
+    @Override
+    public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
 
     }
 

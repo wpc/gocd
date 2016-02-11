@@ -166,9 +166,7 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
             Work work = assignWorkToAgent(agentInstance);
             if (work != NO_WORK) {
 
-                work.doWork(agentInstance,
-                        new AgentRemoteBuildSession(agentInstance, agentRemoteHandler),
-                        buildRepositoryRemote, urlService);
+                work.doWork(new AgentRemoteBuildSession(agentInstance, agentRemoteHandler), buildRepositoryRemote, urlService);
             }
         }
         if (LOGGER.isDebugEnabled()) {

@@ -19,7 +19,6 @@ package com.thoughtworks.go.remote.work;
 import java.io.Serializable;
 
 import com.thoughtworks.go.agent.RemoteBuildSession;
-import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
@@ -42,5 +41,5 @@ public interface Work extends Serializable {
 
     void cancel(EnvironmentVariableContext environmentVariableContext, AgentRuntimeInfo agentruntimeInfo);
 
-    void doWork(AgentInstance agentInstance, RemoteBuildSession agentRemoteBuildSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService);
+    void doWork(RemoteBuildSession agentRemoteBuildSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService);
 }

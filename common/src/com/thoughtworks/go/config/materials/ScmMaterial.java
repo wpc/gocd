@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.config.materials;
 
+import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.domain.MaterialRevision;
@@ -24,6 +25,7 @@ import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.util.command.InMemoryStreamConsumer;
 import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
 import com.thoughtworks.go.util.command.UrlArgument;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.File;
@@ -224,5 +226,10 @@ public abstract class ScmMaterial extends AbstractMaterial {
     @Override
     public boolean supportsDestinationFolder() {
         return true;
+    }
+
+    @Override
+    public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
+        throw new NotImplementedException("under construction");
     }
 }
