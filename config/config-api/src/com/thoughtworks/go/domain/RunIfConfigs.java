@@ -53,6 +53,21 @@ public class RunIfConfigs extends BaseCollection<RunIfConfig> implements Validat
         return this.contains(currentStatus);
     }
 
+    public RunIfConfig aggregate() {
+        if (this.contains(RunIfConfig.ANY)) {
+            return RunIfConfig.ANY;
+        } else if (this.contains(RunIfConfig.PASSED)) {
+            if (this.contains(RunIfConfig.FAILED)) {
+                return RunIfConfig.ANY;
+            }
+            return RunIfConfig.PASSED;
+        } else if (this.contains(RunIfConfig.FAILED)) {
+            return RunIfConfig.FAILED;
+        } else {
+            return RunIfConfig.PASSED;
+        }
+    }
+
     public void validate(ValidationContext validationContext) {
     }
 

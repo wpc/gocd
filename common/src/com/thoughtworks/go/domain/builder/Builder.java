@@ -19,6 +19,7 @@ package com.thoughtworks.go.domain.builder;
 import java.io.Serializable;
 import static java.lang.String.format;
 
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.config.RunIfConfig;
 import com.thoughtworks.go.domain.BuildLogElement;
 import com.thoughtworks.go.domain.RunIfConfigs;
@@ -117,4 +118,7 @@ public abstract class Builder implements Serializable {
         throw new CruiseControlException(message);
     }
 
+    public BuildCommand buildCommand(TaskExtension taskExtension) {
+        return new BuildCommand("echo", "should exec " + this.getClass().getName());
+    }
 }

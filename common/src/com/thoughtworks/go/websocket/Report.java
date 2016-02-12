@@ -24,6 +24,7 @@ import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import java.io.Serializable;
 
 public class Report implements Serializable {
+    private String buildId;
     private AgentRuntimeInfo agentRuntimeInfo;
     private JobIdentifier jobIdentifier;
     private JobResult result;
@@ -41,6 +42,12 @@ public class Report implements Serializable {
         this.result = result;
     }
 
+    public Report(AgentRuntimeInfo agentRuntimeInfo, String buildId, JobState jobState) {
+        this.agentRuntimeInfo = agentRuntimeInfo;
+        this.buildId = buildId;
+        this.jobState = jobState;
+    }
+
     public JobState getJobState() {
         return jobState;
     }
@@ -55,5 +62,13 @@ public class Report implements Serializable {
 
     public JobResult getResult() {
         return result;
+    }
+
+    public String getBuildId() {
+        return buildId;
+    }
+
+    public void setJobIdentifier(JobIdentifier jobIdentifier) {
+        this.jobIdentifier = jobIdentifier;
     }
 }

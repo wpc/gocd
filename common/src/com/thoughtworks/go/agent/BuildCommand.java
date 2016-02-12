@@ -1,5 +1,7 @@
 package com.thoughtworks.go.agent;
 
+import com.thoughtworks.go.config.RunIfConfig;
+
 import java.util.Arrays;
 import java.util.Map;
 
@@ -29,11 +31,13 @@ public class BuildCommand {
     private BuildCommand[] subCommands;
     private String workingDirectory;
     private Test test;
+    private String runIfConfig = "passed";
 
     public BuildCommand(String name, String... args) {
         this.name = name;
         this.args = args;
     }
+
     public BuildCommand(String name, Map args) {
         this.name = name;
         this.args = new Object[] {args};
@@ -55,6 +59,7 @@ public class BuildCommand {
                 ", subCommands=" + Arrays.toString(subCommands) +
                 ", workingDirectory='" + workingDirectory + '\'' +
                 ", test=" + test +
+                ", runIfConfig='" + runIfConfig + '\'' +
                 '}';
     }
 
@@ -81,4 +86,13 @@ public class BuildCommand {
     public void setSubCommands(BuildCommand[] subCommands) {
         this.subCommands = subCommands;
     }
+
+    public String getRunIfConfig() {
+        return runIfConfig;
+    }
+
+    public void setRunIfConfig(String runIfConfig) {
+        this.runIfConfig = runIfConfig;
+    }
+
 }

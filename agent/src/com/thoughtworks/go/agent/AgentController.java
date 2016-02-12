@@ -122,7 +122,7 @@ public class AgentController {
             agentRuntimeInfo = AgentRuntimeInfo.fromAgent(identifier, AgentStatus.Idle.getRuntimeStatus(), currentWorkingDirectory(), systemEnvironment.getAgentLauncherVersion());
         }
 
-        this.buildSession = new BuildSession(agentRuntimeInfo, systemEnvironment, httpService);
+        this.buildSession = new BuildSession(agentRuntimeInfo, systemEnvironment, httpService, websocketService);
 
         subprocessLogger.registerAsExitHook("Following processes were alive at shutdown: ");
     }

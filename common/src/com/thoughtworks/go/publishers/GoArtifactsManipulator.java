@@ -24,6 +24,7 @@ import java.util.Properties;
 import java.util.zip.Deflater;
 import javax.servlet.http.HttpServletResponse;
 
+import com.thoughtworks.go.agent.CommandResult;
 import com.thoughtworks.go.domain.DownloadAction;
 import com.thoughtworks.go.domain.builder.FetchArtifactBuilder;
 import com.thoughtworks.go.domain.JobIdentifier;
@@ -32,6 +33,7 @@ import com.thoughtworks.go.domain.exception.ArtifactPublishingException;
 import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.remote.work.ConsoleOutputTransmitter;
 import com.thoughtworks.go.remote.work.RemoteConsoleAppender;
+import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.util.*;
 import com.thoughtworks.go.util.HttpService;
 import com.thoughtworks.go.util.URLService;
@@ -214,4 +216,59 @@ public class GoArtifactsManipulator {
         return new ConsoleOutputTransmitter(new RemoteConsoleAppender(consoleUrl, httpService, agentIdentifier));
     }
 
+    public void publish(ConsoleOutputTransmitter console, String url, File source, String dest) {
+        if (!source.exists()) {
+            String message = "Failed to find " + source.getAbsolutePath();
+            console.consumeLine(message);
+            bomb(message);
+        }
+
+        int publishingAttempts = 0;
+        Throwable lastException = null;
+        while (publishingAttempts < GoConstants.PUBLISH_MAX_RETRIES) {
+            File tmpDir = null;
+            try {
+                publishingAttempts++;
+
+                tmpDir = FileUtil.createTempFolder();
+                File dataToUpload = new File(tmpDir, source.getName() + ".zip");
+                zipUtil.zip(source, dataToUpload, Deflater.BEST_SPEED);
+
+                long size = 0;
+                if (source.isDirectory()) {
+                    size = FileUtils.sizeOfDirectory(source);
+                } else {
+                    size = source.length();
+                }
+
+                console.consumeLine("Uploading artifacts from " + source.getAbsolutePath() + " to " + getDestPath(dest));
+
+                String normalizedDestPath = normalizePath(dest);
+                int statusCode = httpService.upload(url, size, dataToUpload, artifactChecksums(source, normalizedDestPath));
+
+                if (statusCode == HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE) {
+                    String message = String.format("Artifact upload for file %s (Size: %s) was denied by the server. This usually happens when server runs out of disk space.",
+                            source.getAbsolutePath(), size);
+                    console.consumeLine(message);
+                    LOGGER.error("[Artifact Upload] Artifact upload was denied by the server. This usually happens when server runs out of disk space.");
+                    publishingAttempts = PUBLISH_MAX_RETRIES;
+                    bomb(message + ".  HTTP return code is " + statusCode);
+                }
+                if (statusCode < HttpServletResponse.SC_OK || statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES) {
+                    bomb("Failed to upload " + source.getAbsolutePath() + ".  HTTP return code is " + statusCode);
+                }
+                return;
+            } catch (Throwable e) {
+                String message = "Failed to upload " + source.getAbsolutePath();
+                LOGGER.error(message, e);
+                console.consumeLine(message);
+                lastException = e;
+            } finally {
+                FileUtil.deleteFolder(tmpDir);
+            }
+        }
+        if (lastException != null) {
+            throw new RuntimeException(lastException);
+        }
+    }
 }

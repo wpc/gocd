@@ -4,8 +4,10 @@ import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.CommandResult;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.domain.AgentInstance;
+import com.thoughtworks.go.domain.JobState;
 import com.thoughtworks.go.remote.work.Callback;
 import com.thoughtworks.go.server.websocket.AgentRemoteHandler;
+import com.thoughtworks.go.util.GoConstants;
 import com.thoughtworks.go.websocket.Action;
 import com.thoughtworks.go.websocket.Message;
 
@@ -27,11 +29,12 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
     }
 
     @Override
-    public void start(String buildLocator, String buildLocatorForDisplay, String consoleURI, final Callback<CommandResult> callback) {
+    public void start(String buildLocator, String buildLocatorForDisplay, Long buildId, String consoleURI, final Callback<CommandResult> callback) {
         Map<String, Object> sessionSettings = new HashMap<>();
         sessionSettings.put("buildLocator", buildLocator);
         sessionSettings.put("buildLocatorForDisplay", buildLocatorForDisplay);
         sessionSettings.put("consoleURI", consoleURI);
+        sessionSettings.put("buildId", buildId.toString());
         BuildCommand cmd = new BuildCommand("start", sessionSettings);
         agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
                 new Message(Action.cmd, cmd),
@@ -75,21 +78,19 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
 
     @Override
     public void end() {
-        if(commands.size() > 0) {
-            throw new RuntimeException("should not end build session when there are commands on fly, use flush callback");
-        }
-        commands.add(new BuildCommand("end"));
-        flush(new Callback<CommandResult>() {
-            @Override
-            public void call(CommandResult result) {
-                //do nothing
-            }
-        });
+        BuildCommand end = new BuildCommand("end");
+        end.setRunIfConfig("any");
+        commands.add(end);
     }
 
 
     @Override
     public void addCommand(BuildCommand command) {
         commands.add(command);
+    }
+
+    @Override
+    public void report(JobState state) {
+        addCommand(new BuildCommand("report", state.toString()));
     }
 }

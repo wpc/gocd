@@ -21,9 +21,11 @@ package com.thoughtworks.go.remote.work;
 import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.CommandResult;
 import com.thoughtworks.go.agent.RemoteBuildSession;
+import com.thoughtworks.go.config.ArtifactPlan;
 import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
 import com.thoughtworks.go.config.RunIfConfig;
 import com.thoughtworks.go.domain.*;
+import com.thoughtworks.go.domain.builder.Builder;
 import com.thoughtworks.go.domain.materials.MaterialAgentFactory;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
@@ -43,6 +45,7 @@ import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
 import com.thoughtworks.go.util.command.SafeOutputStreamConsumer;
 import com.thoughtworks.go.work.DefaultGoPublisher;
 import com.thoughtworks.go.work.GoPublisher;
+import javafx.print.PrinterJob;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,6 +55,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -59,6 +63,7 @@ import java.util.Set;
 import static com.thoughtworks.go.util.ArtifactLogUtil.getConsoleOutputFolderAndFileNameUrl;
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 import static com.thoughtworks.go.util.ExceptionUtils.messageOf;
+import static com.thoughtworks.go.util.FileUtil.normalizePath;
 import static java.lang.String.format;
 
 public class BuildWork implements Work {
@@ -275,7 +280,7 @@ public class BuildWork implements Work {
     }
 
     @Override
-    public void doWork(final RemoteBuildSession remoteBuildSession, final BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
+    public void doWork(final RemoteBuildSession remoteBuildSession, final BuildRepositoryRemote buildRepositoryRemote, final URLService urlService) {
 
         this.plan = assignment.getPlan();
         this.materialRevisions = assignment.materialRevisions();
@@ -288,6 +293,7 @@ public class BuildWork implements Work {
 
         remoteBuildSession.start(plan.getIdentifier().buildLocator(),
                 plan.getIdentifier().buildLocatorForDisplay(),
+                plan.getIdentifier().getBuildId(),
                 consoleURI,
                 new Callback<CommandResult>() {
             @Override
@@ -296,6 +302,7 @@ public class BuildWork implements Work {
 
                 remoteBuildSession.echo("Job started.");
                 remoteBuildSession.echo("Start to prepare");
+                remoteBuildSession.report(JobState.Preparing);
 
                 if (!plan.shouldFetchMaterials()) {
                     remoteBuildSession.echo("Skipping material update since stage is configured not to fetch materials");
@@ -307,21 +314,53 @@ public class BuildWork implements Work {
                     revision.getMaterial().updateTo(remoteBuildSession, revision.getRevision(), workingDirectory);
                 }
                 remoteBuildSession.export(); //dump env
+                remoteBuildSession.report(JobState.Building);
 
+                remoteBuildSession.echo("Start to build");
+
+                remoteBuildSession.addCommand(createBuildersCommand());
+                remoteBuildSession.echo("Current job status: $GO_BUILD_RESULT");
+                remoteBuildSession.report(JobState.Completed);
+                remoteBuildSession.echo("Start to create properties");
+
+                for (ArtifactPropertiesGenerator generator : getArtifactPropertiesGenerators()) {
+                    String url = urlService.getPropertiesUrl(plan.getIdentifier(), generator.getName());
+                    BuildCommand cmd = new BuildCommand("generateProperty", url, generator.getName(), generator.getSrc(), generator.getXpath());
+                    cmd.setWorkingDirectory(workingDirectory.getPath());
+                    cmd.setRunIfConfig("any");
+                    remoteBuildSession.addCommand(cmd);
+                }
+                remoteBuildSession.echo("Start to upload");
+
+                for (ArtifactPlan ap : plan.getArtifactPlans()) {
+                    String normalizedDestPath = normalizePath(ap.getDest());
+                    String url = urlService.getUploadUrlOfAgent(plan.getIdentifier(), normalizedDestPath, 1);
+                    BuildCommand cmd = new BuildCommand("upload", url, ap.getArtifactType().name(), ap.getSrc(), ap.getDest());
+                    cmd.setRunIfConfig("any");
+                    remoteBuildSession.addCommand(cmd);
+                }
+                remoteBuildSession.end();
                 remoteBuildSession.flush(new Callback<CommandResult>() {
                     @Override
                     public void call(CommandResult result) {
-                        try {
-                            JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;
-                            buildRepositoryRemote.reportCompleted(result.getAgentRuntimeInfo(), assignment.getPlan().getIdentifier(), jobResult);
-                        } finally {
-                            remoteBuildSession.end();
-                        }
+                        JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;
+                        buildRepositoryRemote.reportCompleted(result.getAgentRuntimeInfo(), assignment.getPlan().getIdentifier(), jobResult);
+
                     }
                 });
             }
         });
 
+    }
+
+    private BuildCommand createBuildersCommand() {
+        List<BuildCommand> commands = new ArrayList<>();
+        for (Builder builder : assignment.getBuilders()) {
+            commands.add(builder.buildCommand(null));
+        }
+        BuildCommand compose = new BuildCommand("compose");
+        compose.setSubCommands(commands.toArray(new BuildCommand[commands.size()]));
+        return compose;
     }
 
     // only for test

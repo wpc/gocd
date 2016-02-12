@@ -23,6 +23,7 @@ import com.thoughtworks.go.remote.AgentInstruction;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.server.service.AgentService;
+import com.thoughtworks.go.server.service.JobInstanceService;
 import com.thoughtworks.go.websocket.Action;
 import com.thoughtworks.go.websocket.Message;
 import com.thoughtworks.go.websocket.Report;
@@ -44,7 +45,7 @@ public class AgentRemoteHandlerTest {
     public void setUp() {
         remote = mock(BuildRepositoryRemote.class);
         agentService = mock(AgentService.class);
-        handler = new AgentRemoteHandler(remote, agentService);
+        handler = new AgentRemoteHandler(remote, agentService, mock(JobInstanceService.class));
     }
 
     @Test

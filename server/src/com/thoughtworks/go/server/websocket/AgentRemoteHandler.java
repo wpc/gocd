@@ -17,11 +17,13 @@
 package com.thoughtworks.go.server.websocket;
 
 import com.thoughtworks.go.domain.AgentInstance;
+import com.thoughtworks.go.domain.JobInstance;
 import com.thoughtworks.go.remote.AgentInstruction;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
 import com.thoughtworks.go.remote.work.Callback;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.server.service.AgentService;
+import com.thoughtworks.go.server.service.JobInstanceService;
 import com.thoughtworks.go.websocket.Action;
 import com.thoughtworks.go.websocket.Message;
 import com.thoughtworks.go.websocket.Report;
@@ -47,11 +49,13 @@ public class AgentRemoteHandler {
     private BuildRepositoryRemote buildRepositoryRemote;
     @Autowired
     private AgentService agentService;
+    private final JobInstanceService jobInstanceService;
 
     @Autowired
-    public AgentRemoteHandler(@Qualifier("buildRepositoryMessageProducer") BuildRepositoryRemote buildRepositoryRemote, AgentService agentService) {
+    public AgentRemoteHandler(@Qualifier("buildRepositoryMessageProducer") BuildRepositoryRemote buildRepositoryRemote, AgentService agentService, JobInstanceService jobInstanceService) {
         this.buildRepositoryRemote = buildRepositoryRemote;
         this.agentService = agentService;
+        this.jobInstanceService = jobInstanceService;
     }
 
     public void process(Agent agent, Message msg) {
@@ -89,6 +93,13 @@ public class AgentRemoteHandler {
                 break;
             case reportCurrentStatus:
                 Report report = (Report) msg.getData();
+                if (report.getJobIdentifier() == null && report.getBuildId() != null) {
+                    JobInstance instance = jobInstanceService.buildById(Long.valueOf(report.getBuildId()));
+                    if (instance == null) {
+                        return;
+                    }
+                    report.setJobIdentifier(instance.getIdentifier());
+                }
                 buildRepositoryRemote.reportCurrentStatus(report.getAgentRuntimeInfo(), report.getJobIdentifier(), report.getJobState());
                 break;
             case reportCompleting:
