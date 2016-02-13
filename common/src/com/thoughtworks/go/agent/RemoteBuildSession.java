@@ -3,11 +3,10 @@ package com.thoughtworks.go.agent;
 import com.thoughtworks.go.domain.JobState;
 import com.thoughtworks.go.remote.work.Callback;
 
-import java.io.File;
 import java.util.Map;
 
 public interface RemoteBuildSession {
-    void start(String buildLocator, String buildLocatorForDisplay, Long buildId, String consoleURI, Callback<CommandResult> callback);
+    void start(String buildLocator, String buildLocatorForDisplay, Long buildId, String consoleURI, String uploadBase, String propertiesBaseUrl, Callback<CommandResult> callback);
     void export(Map<String, String> envs);
     void export();
     void flush(Callback<CommandResult> callback);

@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.config.materials.dependency;
 
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.FetchTask;
@@ -96,8 +97,8 @@ public class DependencyMaterial extends AbstractMaterial {
     }
 
     @Override
-    public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
-
+    public BuildCommand updateTo(Revision revision, File baseDir) {
+        return new BuildCommand("compose");
     }
 
     @Override protected void appendPipelineUniqueCriteria(Map<String, Object> basicCriteria) {

@@ -16,8 +16,10 @@
 
 package com.thoughtworks.go.util;
 
+import com.thoughtworks.go.agent.CommandResult;
 import com.thoughtworks.go.agent.ServerUrlGenerator;
 import com.thoughtworks.go.domain.JobIdentifier;
+import com.thoughtworks.go.remote.work.Callback;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -68,12 +70,18 @@ public class URLService implements ServerUrlGenerator{
         return format("%s/%s/%s/%s?attempt=%d&buildId=%d", baseRemotingURL, "remoting", "files", jobIdentifier.artifactLocator(filePath), attempt, jobIdentifier.getBuildId());
     }
 
+
+    public String getUploadBaseUrlOfAgent(JobIdentifier jobIdentifier) {
+        return format("%s/%s/%s/%s", baseRemotingURL, "remoting", "files", jobIdentifier.artifactLocator(""));
+    }
+
     /*
      * Server will use this method, the base url is in the request.
      */
     public String getRestfulArtifactUrl(JobIdentifier jobIdentifier, String filePath) {
         return format("/%s/%s", "files", jobIdentifier.artifactLocator(filePath));
     }
+
 
     /*
     * Agent will use this method, the baseUrl will be injected from config xml in agent side.
@@ -83,6 +91,7 @@ public class URLService implements ServerUrlGenerator{
         return format("%s/%s/%s/%s",
                 baseRemotingURL, "remoting", "properties", jobIdentifier.propertyLocator(propertyName));
     }
+
 
     public String serverUrlFor(String subPath) {
         return format("%s/%s", baseRemotingURL, subPath);
@@ -108,4 +117,6 @@ public class URLService implements ServerUrlGenerator{
             throw new RuntimeException("Invalid Go Server url", e);
         }
     }
+
+
 }

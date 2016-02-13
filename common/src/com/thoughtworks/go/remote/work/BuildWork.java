@@ -45,7 +45,6 @@ import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
 import com.thoughtworks.go.util.command.SafeOutputStreamConsumer;
 import com.thoughtworks.go.work.DefaultGoPublisher;
 import com.thoughtworks.go.work.GoPublisher;
-import javafx.print.PrinterJob;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,7 +62,6 @@ import java.util.Set;
 import static com.thoughtworks.go.util.ArtifactLogUtil.getConsoleOutputFolderAndFileNameUrl;
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 import static com.thoughtworks.go.util.ExceptionUtils.messageOf;
-import static com.thoughtworks.go.util.FileUtil.normalizePath;
 import static java.lang.String.format;
 
 public class BuildWork implements Work {
@@ -295,62 +293,101 @@ public class BuildWork implements Work {
                 plan.getIdentifier().buildLocatorForDisplay(),
                 plan.getIdentifier().getBuildId(),
                 consoleURI,
+                urlService.getUploadBaseUrlOfAgent(plan.getIdentifier()),
+                urlService.getPropertiesUrl(plan.getIdentifier(), ""),
                 new Callback<CommandResult>() {
-            @Override
-            public void call(CommandResult result) {
-                remoteBuildSession.export(envContext.getProperties());
-
-                remoteBuildSession.echo("Job started.");
-                remoteBuildSession.echo("Start to prepare");
-                remoteBuildSession.report(JobState.Preparing);
-
-                if (!plan.shouldFetchMaterials()) {
-                    remoteBuildSession.echo("Skipping material update since stage is configured not to fetch materials");
-                }
-
-                remoteBuildSession.echo("Start to update materials.\n");
-
-                for (MaterialRevision revision : materialRevisions.getRevisions()) {
-                    revision.getMaterial().updateTo(remoteBuildSession, revision.getRevision(), workingDirectory);
-                }
-                remoteBuildSession.export(); //dump env
-                remoteBuildSession.report(JobState.Building);
-
-                remoteBuildSession.echo("Start to build");
-
-                remoteBuildSession.addCommand(createBuildersCommand());
-                remoteBuildSession.echo("Current job status: $GO_BUILD_RESULT");
-                remoteBuildSession.report(JobState.Completed);
-                remoteBuildSession.echo("Start to create properties");
-
-                for (ArtifactPropertiesGenerator generator : getArtifactPropertiesGenerators()) {
-                    String url = urlService.getPropertiesUrl(plan.getIdentifier(), generator.getName());
-                    BuildCommand cmd = new BuildCommand("generateProperty", url, generator.getName(), generator.getSrc(), generator.getXpath());
-                    cmd.setWorkingDirectory(workingDirectory.getPath());
-                    cmd.setRunIfConfig("any");
-                    remoteBuildSession.addCommand(cmd);
-                }
-                remoteBuildSession.echo("Start to upload");
-
-                for (ArtifactPlan ap : plan.getArtifactPlans()) {
-                    String normalizedDestPath = normalizePath(ap.getDest());
-                    String url = urlService.getUploadUrlOfAgent(plan.getIdentifier(), normalizedDestPath, 1);
-                    BuildCommand cmd = new BuildCommand("upload", url, ap.getArtifactType().name(), ap.getSrc(), ap.getDest());
-                    cmd.setRunIfConfig("any");
-                    remoteBuildSession.addCommand(cmd);
-                }
-                remoteBuildSession.end();
-                remoteBuildSession.flush(new Callback<CommandResult>() {
                     @Override
                     public void call(CommandResult result) {
-                        JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;
-                        buildRepositoryRemote.reportCompleted(result.getAgentRuntimeInfo(), assignment.getPlan().getIdentifier(), jobResult);
+                        remoteBuildSession.export(envContext.getProperties());
+                        remoteBuildSession.echo("Job started.");
+                        remoteBuildSession.addCommand(createPrepareCommand());
+                        remoteBuildSession.addCommand(createMainBuildCommand());
+                        remoteBuildSession.end();
+                        remoteBuildSession.flush(new Callback<CommandResult>() {
+                            @Override
+                            public void call(CommandResult result) {
+                                JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;
+                                buildRepositoryRemote.reportCompleted(result.getAgentRuntimeInfo(), assignment.getPlan().getIdentifier(), jobResult);
 
+                            }
+                        });
                     }
                 });
-            }
-        });
 
+    }
+
+    private BuildCommand createMainBuildCommand() {
+        List<BuildCommand> commands = new ArrayList<>();
+
+        commands.add(new BuildCommand("echo", "Start to build"));
+        commands.add(new BuildCommand("report", JobState.Building.name()));
+
+        commands.add(createBuildersCommand());
+
+        commands.add(new BuildCommand("echo", "Current job status: passed"));
+        BuildCommand echoFailed = new BuildCommand("echo", "Current job status: failed");
+        echoFailed.setRunIfConfig("failed");
+        commands.add(echoFailed);
+
+        commands.add(new BuildCommand("report", JobState.Completed.name()));
+        commands.add(new BuildCommand("echo", "Start to create properties"));
+
+        for (ArtifactPropertiesGenerator generator : getArtifactPropertiesGenerators()) {
+            BuildCommand cmd = new BuildCommand("generateProperty", generator.getName(), generator.getSrc(), generator.getXpath());
+            cmd.setWorkingDirectory(workingDirectory.getPath());
+            cmd.setRunIfConfig("any");
+            commands.add(cmd);
+        }
+
+        commands.add(new BuildCommand("echo", "Start to upload"));
+
+        for (ArtifactPlan ap : plan.getArtifactPlans()) {
+            BuildCommand cmd = new BuildCommand("uploadArtifact", ap.getSrc(), ap.getDest());
+            cmd.setRunIfConfig("any");
+            cmd.setWorkingDirectory(workingDirectory.getPath());
+            commands.add(cmd);
+        }
+
+        List<String> testReportArgs = new ArrayList<>();
+        for (ArtifactPlan artifactPlan : artifactPlansWithType(ArtifactType.unit)) {
+            testReportArgs.add(artifactPlan.getSrc());
+        }
+
+        BuildCommand uploadTests = new BuildCommand("generateTestReport", testReportArgs.toArray(new String[testReportArgs.size()]));
+        uploadTests.setRunIfConfig("any");
+        uploadTests.setWorkingDirectory(workingDirectory.getPath());
+
+        commands.add(uploadTests);
+        return new BuildCommand("compose", commands);
+    }
+
+    private BuildCommand createPrepareCommand() {
+        List<BuildCommand> commands = new ArrayList<>();
+
+        commands.add(new BuildCommand("echo", "Start to prepare"));
+        commands.add(new BuildCommand("report", JobState.Preparing.name()));
+
+        commands.add(new BuildCommand("export")); //dump env
+
+        if (!plan.shouldFetchMaterials()) {
+            commands.add(new BuildCommand("echo", "Skipping material update since stage is configured not to fetch materials"));
+        } else {
+            commands.add(new BuildCommand("echo", "Start to update materials.\n"));
+            for (MaterialRevision revision : materialRevisions.getRevisions()) {
+                commands.add(revision.getMaterial().updateTo(revision.getRevision(), workingDirectory));
+            }
+        }
+        return new BuildCommand("compose", commands);
+    }
+
+    private List<ArtifactPlan> artifactPlansWithType(ArtifactType artifactType) {
+        ArrayList<ArtifactPlan> result = new ArrayList<>();
+        for (ArtifactPlan artifactPlan : plan.getArtifactPlans()) {
+            if (artifactPlan.getArtifactType() == artifactType) {
+                result.add(artifactPlan);
+            }
+        }
+        return result;
     }
 
     private BuildCommand createBuildersCommand() {

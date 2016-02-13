@@ -22,20 +22,72 @@
     </authorization>
     <pipeline name="test" isLocked="false">
       <materials>
-        <git url="/Users/xli/code/gotest" />
+        <git url="file:///tmp/wpc.github.io" materialName="github" />
       </materials>
       <stage name="defaultStage">
         <jobs>
           <job name="defaultJob">
             <tasks>
-              <rake />
+              <exec command="ls">
+                <runif status="passed" />
+              </exec>
             </tasks>
+            <artifacts>
+              <artifact src="Gemfile.lock" />
+              <artifact src="about.html" dest="about" />
+              <test src="testreports" />
+              <artifact src="about.html" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="bar" isLocked="false">
+      <materials>
+        <git url="file:///tmp/wpc.github.io" materialName="github" />
+      </materials>
+      <stage name="defaultStage">
+        <jobs>
+          <job name="defaultJob">
+            <tasks>
+              <exec command="ls">
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <artifacts>
+              <artifact src="Gemfile.lock" />
+              <artifact src="about.html" dest="about" />
+              <test src="testreports" />
+              <artifact src="about.html" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="abcd3" isLocked="false">
+      <materials>
+        <git url="file:///tmp/wpc.github.io" materialName="github" />
+      </materials>
+      <stage name="defaultStage">
+        <jobs>
+          <job name="defaultJob">
+            <tasks>
+              <exec command="ls">
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <artifacts>
+              <artifact src="Gemfile.lock" />
+              <artifact src="about.html" dest="about" />
+              <test src="testreports" />
+              <artifact src="about.html" />
+            </artifacts>
           </job>
         </jobs>
       </stage>
     </pipeline>
   </pipelines>
   <agents>
-    <agent hostname="xiao.local" ipaddress="10.19.22.168" uuid="b082e50d-4023-4913-b9a1-76c1651e53ad" />
+    <agent hostname="PW9950-338.local" ipaddress="10.19.23.19" uuid="5da1739e-1710-46ed-a054-24ae7a00e403" />
   </agents>
 </cruise>

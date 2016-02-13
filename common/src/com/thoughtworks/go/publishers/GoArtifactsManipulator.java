@@ -216,7 +216,7 @@ public class GoArtifactsManipulator {
         return new ConsoleOutputTransmitter(new RemoteConsoleAppender(consoleUrl, httpService, agentIdentifier));
     }
 
-    public void publish(ConsoleOutputTransmitter console, String url, File source, String dest) {
+    public void publish(ConsoleOutputTransmitter console, File source, String dest, String baseUrl, String buildId) {
         if (!source.exists()) {
             String message = "Failed to find " + source.getAbsolutePath();
             console.consumeLine(message);
@@ -244,6 +244,7 @@ public class GoArtifactsManipulator {
                 console.consumeLine("Uploading artifacts from " + source.getAbsolutePath() + " to " + getDestPath(dest));
 
                 String normalizedDestPath = normalizePath(dest);
+                String url = format("%s/%s?attempt=%d&buildId=%s", baseUrl, UrlUtil.encodeInUtf8(normalizedDestPath), publishingAttempts, buildId);
                 int statusCode = httpService.upload(url, size, dataToUpload, artifactChecksums(source, normalizedDestPath));
 
                 if (statusCode == HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE) {

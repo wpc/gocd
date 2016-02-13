@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.domain.materials;
 
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.config.materials.AbstractMaterial;
@@ -70,7 +71,7 @@ public class AbstractMaterialTest {
         }
 
         @Override
-        public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
+        public BuildCommand updateTo(Revision revision, File baseDir) {
             throw new UnsupportedOperationException();
         }
 

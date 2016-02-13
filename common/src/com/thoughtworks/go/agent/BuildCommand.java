@@ -2,7 +2,9 @@ package com.thoughtworks.go.agent;
 
 import com.thoughtworks.go.config.RunIfConfig;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 public class BuildCommand {
@@ -27,20 +29,30 @@ public class BuildCommand {
 
     private final String name;
     private Object[] args;
-
     private BuildCommand[] subCommands;
     private String workingDirectory;
     private Test test;
     private String runIfConfig = "passed";
+
+    public BuildCommand(String name) {
+        this.name = name;
+        this.args = new Object[0];
+        this.subCommands = new BuildCommand[0];
+    }
+
+    public BuildCommand(String name, List<BuildCommand> subCommands) {
+        this(name);
+        this.subCommands = subCommands.toArray(new BuildCommand[subCommands.size()]);
+    }
 
     public BuildCommand(String name, String... args) {
         this.name = name;
         this.args = args;
     }
 
-    public BuildCommand(String name, Map args) {
+    public BuildCommand(String name, Map... args) {
         this.name = name;
-        this.args = new Object[] {args};
+        this.args = args;
     }
 
     public String getName() {
@@ -48,7 +60,15 @@ public class BuildCommand {
     }
 
     public Object[] getArgs() {
-        return args == null ? new String[0] : args;
+        return args;
+    }
+
+    public String[] getStringArgs() {
+        String[] result = new String[args.length];
+        for (int i = 0; i < args.length; i++) {
+            result[i] = args[i].toString();
+        }
+        return result;
     }
 
     @Override
@@ -69,7 +89,7 @@ public class BuildCommand {
 
 
     public String getWorkingDirectory() {
-        return workingDirectory;
+        return workingDirectory == null ? "." : workingDirectory;
     }
 
     public Test getTest() {

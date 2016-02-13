@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.config.materials;
 
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.PipelineConfig;
@@ -229,7 +230,7 @@ public abstract class ScmMaterial extends AbstractMaterial {
     }
 
     @Override
-    public void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir) {
+    public BuildCommand updateTo(Revision revision, File baseDir) {
         throw new NotImplementedException("under construction");
     }
 }

@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.domain.materials;
 
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.PipelineConfig;
@@ -46,7 +47,7 @@ public interface Material extends Serializable {
     //scm.findRecentModifications(5)
 
     void updateTo(ProcessOutputStreamConsumer outputStreamConsumer, File baseDir, RevisionContext revisionContext, final SubprocessExecutionContext execCtx);
-    void updateTo(RemoteBuildSession remoteBuildSession, Revision revision, File baseDir);
+    BuildCommand updateTo(Revision revision, File baseDir);
 
     void toJson(Map jsonMap, Revision revision);
 
