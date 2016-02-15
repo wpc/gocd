@@ -4,7 +4,6 @@ import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.agent.CommandResult;
 import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.domain.AgentInstance;
-import com.thoughtworks.go.domain.JobState;
 import com.thoughtworks.go.remote.work.Callback;
 import com.thoughtworks.go.server.websocket.AgentRemoteHandler;
 import com.thoughtworks.go.websocket.Action;
@@ -48,20 +47,10 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
     }
 
     @Override
-    public void export(Map<String, String> envs) {
-        commands.add(new BuildCommand("export", envs));
-    }
-
-    @Override
-    public void export() {
-        commands.add(new BuildCommand("export"));
-    }
-
-  @Override
     public void flush(final Callback<CommandResult> callback) {
-      BuildCommand compose = new BuildCommand("compose");
-      compose.setSubCommands(commands.toArray(new BuildCommand[commands.size()]));
-      agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
+        BuildCommand compose = new BuildCommand("compose");
+        compose.setSubCommands(commands.toArray(new BuildCommand[commands.size()]));
+        agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
                 new Message(Action.cmd, compose),
                 new Callback<Object>() {
                     @Override
@@ -70,11 +59,6 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
                     }
                 });
         commands = new ArrayList<>();
-    }
-
-    @Override
-    public void echo(String s) {
-        commands.add(new BuildCommand("echo", s));
     }
 
     @Override
@@ -88,10 +72,5 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
     @Override
     public void addCommand(BuildCommand command) {
         commands.add(command);
-    }
-
-    @Override
-    public void report(JobState state) {
-        addCommand(new BuildCommand("report", state.toString()));
     }
 }

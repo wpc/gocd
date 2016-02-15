@@ -284,7 +284,7 @@ public class BuildSession {
         }
 
         private String propertyURI(String name) {
-            return format("%s/%s", propertyBaseUrl, UrlUtil.encodeInUtf8(name));
+            return format("%s%s", propertyBaseUrl, UrlUtil.encodeInUtf8(name));
         }
 
         @Override

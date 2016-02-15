@@ -45,6 +45,7 @@ public class TestReporter {
                 LOG.error(message);
             }
         }
+
         if (allFiles.size() > 0) {
             File tempFolder = null;
             try {

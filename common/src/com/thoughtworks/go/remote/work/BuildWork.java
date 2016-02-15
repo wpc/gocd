@@ -298,8 +298,8 @@ public class BuildWork implements Work {
                 new Callback<CommandResult>() {
                     @Override
                     public void call(CommandResult result) {
-                        remoteBuildSession.export(envContext.getProperties());
-                        remoteBuildSession.echo("Job started.");
+                        remoteBuildSession.addCommand(new BuildCommand("export", envContext.getProperties()));
+                        remoteBuildSession.addCommand(new BuildCommand("echo","Job started."));
                         remoteBuildSession.addCommand(createPrepareCommand());
                         remoteBuildSession.addCommand(createMainBuildCommand());
                         remoteBuildSession.end();
