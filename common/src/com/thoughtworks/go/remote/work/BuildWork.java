@@ -19,8 +19,6 @@
 package com.thoughtworks.go.remote.work;
 
 import com.thoughtworks.go.agent.BuildCommand;
-import com.thoughtworks.go.agent.CommandResult;
-import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.ArtifactPlan;
 import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
 import com.thoughtworks.go.config.RunIfConfig;
@@ -54,10 +52,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.thoughtworks.go.util.ArtifactLogUtil.getConsoleOutputFolderAndFileNameUrl;
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
@@ -278,8 +273,7 @@ public class BuildWork implements Work {
     }
 
     @Override
-    public void doWork(final RemoteBuildSession remoteBuildSession, final BuildRepositoryRemote buildRepositoryRemote, final URLService urlService) {
-
+    public BuildCommand toBuildCommand(URLService urlService) {
         this.plan = assignment.getPlan();
         this.materialRevisions = assignment.materialRevisions();
         this.workingDirectory = assignment.getWorkingDirectory();
@@ -289,25 +283,27 @@ public class BuildWork implements Work {
 
         String consoleURI = urlService.getUploadUrlOfAgent(plan.getIdentifier(), getConsoleOutputFolderAndFileNameUrl());
 
-        remoteBuildSession.start(plan.getIdentifier().buildLocator(),
-                plan.getIdentifier().buildLocatorForDisplay(),
-                plan.getIdentifier().getBuildId(),
-                consoleURI,
-                urlService.getUploadBaseUrlOfAgent(plan.getIdentifier()),
-                urlService.getPropertiesUrl(plan.getIdentifier(), ""),
-                new Callback<CommandResult>() {
-                    @Override
-                    public void call(CommandResult result) {
-                        remoteBuildSession.addCommand(new BuildCommand("export", envContext.getProperties()));
-                        remoteBuildSession.addCommand(new BuildCommand("echo","Job started."));
-                        remoteBuildSession.addCommand(createPrepareCommand());
-                        remoteBuildSession.addCommand(createMainBuildCommand());
-                        remoteBuildSession.addCommand(new BuildCommand("reportCompleted").runIf("any"));
-                        remoteBuildSession.end();
-                    }
-                });
+        ArrayList<BuildCommand> commands = new ArrayList<>();
 
+        Map<String, Object> sessionSettings = new HashMap<>();
+
+        sessionSettings.put("buildLocator", plan.getIdentifier().buildLocator());
+        sessionSettings.put("buildLocatorForDisplay", plan.getIdentifier().buildLocatorForDisplay());
+        sessionSettings.put("consoleURI", consoleURI);
+        sessionSettings.put("buildId", plan.getIdentifier().getBuildId().toString());
+        sessionSettings.put("artifactUploadBaseUrl", urlService.getUploadBaseUrlOfAgent(plan.getIdentifier()));
+        sessionSettings.put("propertyBaseUrl", urlService.getPropertiesUrl(plan.getIdentifier(), ""));
+        commands.add(new BuildCommand("start", sessionSettings));
+
+        commands.add(new BuildCommand("export", envContext.getProperties()));
+        commands.add(new BuildCommand("echo", "Job started."));
+        commands.add(createPrepareCommand());
+        commands.add(createMainBuildCommand());
+        commands.add(new BuildCommand("reportCompleted").runIf("any"));
+        commands.add(new BuildCommand("end").runIf("any"));
+        return new BuildCommand("compose", commands);
     }
+
 
     private BuildCommand createMainBuildCommand() {
         List<BuildCommand> commands = new ArrayList<>();

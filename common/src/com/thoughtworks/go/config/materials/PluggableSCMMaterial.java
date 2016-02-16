@@ -19,7 +19,6 @@ package com.thoughtworks.go.config.materials;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.thoughtworks.go.agent.BuildCommand;
-import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.domain.MaterialInstance;

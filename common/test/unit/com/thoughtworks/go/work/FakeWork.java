@@ -16,7 +16,7 @@
 
 package com.thoughtworks.go.work;
 
-import com.thoughtworks.go.agent.RemoteBuildSession;
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
@@ -44,12 +44,12 @@ public class FakeWork implements Work {
         callCount++;
     }
 
-    @Override
-    public void doWork(RemoteBuildSession agentRemoteBuildSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
-
-    }
-
     public int getCallCount() {
         return callCount;
+    }
+
+    @Override
+    public BuildCommand toBuildCommand(URLService urlService) {
+        return new BuildCommand("compose");
     }
 }

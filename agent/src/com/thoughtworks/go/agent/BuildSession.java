@@ -42,37 +42,32 @@ public class BuildSession {
 
     private Map<String, String> envs = new HashMap<>();
     private AgentRuntimeInfo agentRuntimeInfo;
-    private SystemEnvironment systemEnvironment;
     private HttpService httpService;
     private Boolean buildPass;
     private final AgentWebsocketService websocketService;
 
-    public BuildSession(AgentRuntimeInfo agentRuntimeInfo, SystemEnvironment systemEnvironment, HttpService httpService, AgentWebsocketService websocketService) {
+    public BuildSession(AgentRuntimeInfo agentRuntimeInfo, HttpService httpService, AgentWebsocketService websocketService) {
         this.agentRuntimeInfo = agentRuntimeInfo;
-        this.systemEnvironment = systemEnvironment;
         this.httpService = httpService;
         this.websocketService = websocketService;
     }
 
-    public CommandResult process(BuildCommand command) {
+    public boolean process(BuildCommand command) {
         LOG.debug("Processing build command {}", command);
         try {
 
             BulidCommandType type = BulidCommandType.valueOf(command.getName());
 
-            if (buildPass != null) {
-                if ("passed".equals(command.getRunIfConfig()) && !this.buildPass) {
-                    return new CommandResult(0, agentRuntimeInfo);
-                } else if ("failed".equals(command.getRunIfConfig()) && this.buildPass) {
-                    return new CommandResult(0, agentRuntimeInfo);
-                }
+            if (buildPass != null
+                    && ("passed".equals(command.getRunIfConfig()) && !this.buildPass
+                    || "failed".equals(command.getRunIfConfig()) && this.buildPass)) {
+                return true;
             }
 
             BuildCommand.Test test = command.getTest();
             if (test != null) {
-                CommandResult testResult = process(test.command);
-                if (testResult.isSuccess() != test.expectation) {
-                    return new CommandResult(0, agentRuntimeInfo);
+                if (process(test.command) != test.expectation) {
+                    return true;
                 }
             }
 
@@ -108,17 +103,16 @@ public class BuildSession {
                 case end:
                     return end();
                 default:
-                    return new CommandResult(1, agentRuntimeInfo, "Unknown command: " + command.toString());
+                    throw new RuntimeException("Unknown command: " + command);
             }
         } catch (RuntimeException e) {
             LOG.error("Processing error: ", e);
-            agentRuntimeInfo.idle();
-            return new CommandResult(1, agentRuntimeInfo, e.getClass().getName() + ": " + e.getMessage());
+            return false;
         }
     }
 
 
-    private CommandResult downloadDir(BuildCommand command) {
+    private boolean downloadDir(BuildCommand command) {
         String[] args = command.getStringArgs();
         final String url = args[0];
         final String src = args[1];
@@ -145,10 +139,10 @@ public class BuildSession {
         } catch (InterruptedException e) {
             throw new RuntimeException("download interrupted");
         }
-        return successResult();
+        return true;
     }
 
-    private CommandResult downloadFile(BuildCommand command) {
+    private boolean downloadFile(BuildCommand command) {
         String[] args = command.getStringArgs();
         final String url = args[0];
         final String src = args[1];
@@ -174,24 +168,24 @@ public class BuildSession {
         } catch (InterruptedException e) {
             throw new RuntimeException("download interrupted");
         }
-        return successResult();
+        return true;
     }
 
-    private CommandResult generateTestReport(BuildCommand command) {
+    private boolean generateTestReport(BuildCommand command) {
         TestReporter testReporter = new TestReporter(this.publisher, command.getWorkingDirectory());
         testReporter.generateAndUpload(command.getStringArgs());
-        return successResult();
+        return true;
     }
 
-    private CommandResult uploadArtifact(BuildCommand command) {
+    private boolean uploadArtifact(BuildCommand command) {
         final String src = (String) command.getArgs()[0];
         final String dest = (String) command.getArgs()[1];
         ArtifactPlan p = ArtifactPlan.create(ArtifactType.file, src, dest);
         p.publish(this.publisher, new File(command.getWorkingDirectory()));
-        return new CommandResult(0, agentRuntimeInfo);
+        return true;
     }
 
-    private CommandResult generateProperty(BuildCommand command) {
+    private boolean generateProperty(BuildCommand command) {
         String name = (String) command.getArgs()[0];
         String src = (String) command.getArgs()[1];
         String xpath = (String) command.getArgs()[2];
@@ -215,37 +209,37 @@ public class BuildSession {
                 console.consumeLine(message);
             }
         }
-        return successResult();
+        return true;
     }
 
-    private CommandResult reportCurrentStatus(BuildCommand command) {
+    private boolean reportCurrentStatus(BuildCommand command) {
         JobState jobState = JobState.valueOf((String) command.getArgs()[0]);
         websocketService.send(new Message(Action.reportCurrentStatus, new Report(agentRuntimeInfo, buildId, jobState, null)));
-        return new CommandResult(0, agentRuntimeInfo);
+        return true;
     }
 
-    private CommandResult reportCompleted() {
+    private boolean reportCompleted() {
         JobResult result = this.buildPass ? JobResult.Passed : JobResult.Failed;
         websocketService.send(new Message(Action.reportCompleted, new Report(agentRuntimeInfo, buildId, null, result)));
-        return successResult();
+        return true;
     }
 
-    private CommandResult reportCompleting() {
+    private boolean reportCompleting() {
         JobResult result = this.buildPass ? JobResult.Passed : JobResult.Failed;
         websocketService.send(new Message(Action.reportCompleting, new Report(agentRuntimeInfo, buildId, null, result)));
-        return successResult();
+        return true;
     }
 
 
-    private CommandResult test(BuildCommand command) {
+    private boolean test(BuildCommand command) {
         boolean success = false;
         if (command.getArgs()[0].equals("-d")) {
             success = new File((String) command.getArgs()[1]).isDirectory();
         }
-        return new CommandResult(success ? 0 : 1, agentRuntimeInfo);
+        return success;
     }
 
-    private CommandResult exec(BuildCommand command) {
+    private boolean exec(BuildCommand command) {
         String execCommand = (String) command.getArgs()[0];
         CommandLine commandLine = CommandLine.createCommandLine(execCommand);
 
@@ -258,27 +252,25 @@ public class BuildSession {
         }
 
         int exitCode = commandLine.run(new ProcessOutputStreamConsumer<>(console, console), agentRuntimeInfo.getUUId());
-        return new CommandResult(exitCode, agentRuntimeInfo);
+        return exitCode == 0;
     }
 
-    private CommandResult compose(BuildCommand command) {
-        CommandResult result = new CommandResult(0, agentRuntimeInfo);
+    private boolean compose(BuildCommand command) {
+        boolean success = true;
         for (BuildCommand arg : command.getSubCommands()) {
-            CommandResult childResult = process(arg);
-            result.addChild(childResult);
-            if (!childResult.isSuccess()) {
-                result.setExitCode(1);
+            if (!process(arg)) {
+                success = false;
                 buildPass = false;
             }
         }
-        return result;
+        return success;
     }
 
-    private CommandResult export(BuildCommand command) {
+    private boolean export(BuildCommand command) {
         if (command.getArgs().length > 0) {
             Map<String, String> vars = (Map<String, String>) command.getArgs()[0];
             envs.putAll(vars);
-            return successResult();
+            return true;
         } else {
             ArrayList<String> list = new ArrayList<>(envs.size());
             for (String var : envs.keySet()) {
@@ -288,28 +280,28 @@ public class BuildSession {
         }
     }
 
-    private CommandResult end() {
+    private boolean end() {
         agentRuntimeInfo.idle();
         buildPass = null;
         console.stop();
-        return successResult();
+        return true;
     }
 
-    private CommandResult echo(BuildCommand command) {
+    private boolean echo(BuildCommand command) {
         for (Object line : command.getArgs()) {
             console.consumeLine(line.toString());
         }
-        return successResult();
+        return true;
     }
 
-    private CommandResult start(BuildCommand command) {
-        Map<String, Object> settings = (Map<String, Object>) command.getArgs()[0];
-        String buildLocator = (String) settings.get("buildLocator");
-        String buildLocatorForDisplay = (String) settings.get("buildLocatorForDisplay");
-        String consoleURI = (String) settings.get("consoleURI");
-        String artifactUploadBaseUrl = (String) settings.get("artifactUploadBaseUrl");
-        String propertyBaseUrl = (String) settings.get("propertyBaseUrl");
-        this.buildId = (String) settings.get("buildId");
+    private boolean start(BuildCommand command) {
+        Map<String, String> settings = (Map<String, String>) command.getArgs()[0];
+        String buildLocator = settings.get("buildLocator");
+        String buildLocatorForDisplay = settings.get("buildLocatorForDisplay");
+        String consoleURI = settings.get("consoleURI");
+        String artifactUploadBaseUrl = settings.get("artifactUploadBaseUrl");
+        String propertyBaseUrl = settings.get("propertyBaseUrl");
+        this.buildId = settings.get("buildId");
 
         agentRuntimeInfo.busy(new AgentBuildingInfo(buildLocatorForDisplay, buildLocator));
         this.envs = new HashMap<>();
@@ -319,11 +311,7 @@ public class BuildSession {
 
 
         this.publisher = new BuildSessionGoPublisher(console, httpService, artifactUploadBaseUrl, propertyBaseUrl, buildId);
-        return successResult();
-    }
-
-    private CommandResult successResult() {
-        return new CommandResult(0, agentRuntimeInfo);
+        return true;
     }
 
     private static class BuildSessionGoPublisher implements GoPublisher {

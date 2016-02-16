@@ -19,9 +19,6 @@ package com.thoughtworks.go.websocket;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 
 import java.io.*;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -61,27 +58,16 @@ public class Message implements Serializable {
 
     private final Action action;
     private final Object data;
+
     private String ackId;
-    private final String uuid;
-    private final String associatedMessageUUID;
 
     public Message(Action action) {
-        this(action, null, null, UUID.randomUUID().toString());
+        this(action, null);
     }
 
     public Message(Action action, Object data) {
-        this(action, data, null, UUID.randomUUID().toString());
-    }
-
-    public Message(Action action, Object data, String associatedMessageUUID) {
-        this(action, data, associatedMessageUUID, UUID.randomUUID().toString());
-    }
-
-    public Message(Action action, Object data, String associatedMessageUUID, String uuid) {
         this.action = action;
         this.data = data;
-        this.associatedMessageUUID = associatedMessageUUID;
-        this.uuid = uuid;
     }
 
     public Action getAction() {
@@ -130,11 +116,4 @@ public class Message implements Serializable {
         this.ackId = UUID.randomUUID().toString();
     }
 
-    public String getUuid() {
-        return uuid;
-    }
-
-    public String getAssociatedMessageUUID() {
-        return associatedMessageUUID;
-    }
 }

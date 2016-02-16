@@ -51,9 +51,7 @@ public class JsonMessage {
 
             Action action = Action.valueOf(obj.get("action").getAsString());
             Object data = JsonMessage.deserialize(obj.get("data"));
-            String uuid = obj.get("uuid").getAsString();
-            JsonElement associatedMessageUUID = obj.get("associatedMessageUUID");
-            return new Message(action, data, associatedMessageUUID == null ? null : associatedMessageUUID.getAsString(), uuid);
+            return new Message(action, data);
         }
 
         @Override
@@ -61,8 +59,6 @@ public class JsonMessage {
             JsonObject obj = new JsonObject();
             obj.addProperty("action", src.getAction().toString());
             obj.add("data", JsonMessage.serialize(src.getData()));
-            obj.addProperty("uuid", src.getUuid());
-            obj.addProperty("associatedMessageUUID", src.getAssociatedMessageUUID());
             return obj;
         }
     }

@@ -17,7 +17,6 @@
 package com.thoughtworks.go.config.materials.git;
 
 import com.thoughtworks.go.agent.BuildCommand;
-import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.materials.ScmMaterial;
 import com.thoughtworks.go.config.materials.ScmMaterialConfig;
 import com.thoughtworks.go.config.materials.SubprocessExecutionContext;

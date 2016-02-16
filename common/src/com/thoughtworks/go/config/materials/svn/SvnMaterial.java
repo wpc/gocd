@@ -16,7 +16,6 @@
 
 package com.thoughtworks.go.config.materials.svn;
 
-import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.PasswordEncrypter;
 import com.thoughtworks.go.config.materials.PasswordAwareMaterial;
 import com.thoughtworks.go.config.materials.ScmMaterial;

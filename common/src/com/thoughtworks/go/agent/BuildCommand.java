@@ -1,8 +1,5 @@
 package com.thoughtworks.go.agent;
 
-import com.thoughtworks.go.config.RunIfConfig;
-
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +98,7 @@ public class BuildCommand {
     public Test getTest() {
         return test;
     }
+
     public void setTest(BuildCommand command, boolean expectation) {
         this.test = new Test(command, expectation);
     }

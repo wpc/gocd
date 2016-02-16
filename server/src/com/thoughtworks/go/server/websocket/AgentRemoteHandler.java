@@ -44,7 +44,6 @@ public class AgentRemoteHandler {
     private Map<Agent, String> sessionIds = new ConcurrentHashMap<>();
     private Map<Agent, String> agentCookie = new ConcurrentHashMap<>();
     private Map<String, Agent> agentSessions = new ConcurrentHashMap<>();
-    private Map<String, Map<String, Callback<Object>>> agentToCallbacks = new ConcurrentHashMap<>();
 
     @Qualifier("buildRepositoryMessageProducer")
     @Autowired
@@ -108,18 +107,6 @@ public class AgentRemoteHandler {
                 setJobIdentifierFromBuildId(report);
                 buildRepositoryRemote.reportCompleted(report.getAgentRuntimeInfo(), report.getJobIdentifier(), report.getResult());
                 break;
-            case result:
-                String agentUUID = sessionIds.get(agent);
-                Map<String, Callback<Object>> callbacks = agentToCallbacks.get(agentUUID);
-                if(callbacks != null) {
-                    String forMsgUUID = msg.getAssociatedMessageUUID();
-                    Callback<Object> callback = callbacks.get(forMsgUUID);
-                    if(callback != null) {
-                        callback.call(msg.getData());
-                    }
-                }
-                break;
-
             default:
                 throw new RuntimeException("Unknown action: " + msg.getAction());
         }
@@ -161,21 +148,4 @@ public class AgentRemoteHandler {
         }
     }
 
-    public void sendMessageWithCallback(String uuid, Message msg, Callback<Object> callback) {
-        Agent agent = agentSessions.get(uuid);
-        if (agent != null) {
-            this.agentToCallbacks.putIfAbsent(uuid, new ConcurrentHashMap<String, Callback<Object>>());
-            Map<String, Callback<Object>> callbacks = agentToCallbacks.get(uuid);
-            callbacks.put(msg.getUuid(), callback);
-            agent.send(msg);
-        }
-
-    }
-
-    public void sendMessage(String uuid, Message message) {
-        Agent agent = agentSessions.get(uuid);
-        if (agent != null) {
-            agent.send(message);
-        }
-    }
 }

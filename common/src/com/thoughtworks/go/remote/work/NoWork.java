@@ -16,7 +16,7 @@
 
 package com.thoughtworks.go.remote.work;
 
-import com.thoughtworks.go.agent.RemoteBuildSession;
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
@@ -46,8 +46,8 @@ public class NoWork implements Work {
     }
 
     @Override
-    public void doWork(RemoteBuildSession agentRemoteBuildSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
-
+    public BuildCommand toBuildCommand(URLService urlService) {
+        return new BuildCommand("compose");
     }
 
     public String projectName() {

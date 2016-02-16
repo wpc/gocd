@@ -17,7 +17,6 @@
 package com.thoughtworks.go.domain.materials;
 
 import com.thoughtworks.go.agent.BuildCommand;
-import com.thoughtworks.go.agent.RemoteBuildSession;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.config.materials.SubprocessExecutionContext;

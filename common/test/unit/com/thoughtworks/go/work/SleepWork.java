@@ -16,7 +16,7 @@
 
 package com.thoughtworks.go.work;
 
-import com.thoughtworks.go.agent.RemoteBuildSession;
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
@@ -27,6 +27,7 @@ import com.thoughtworks.go.remote.work.Work;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.util.URLService;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
+import org.apache.commons.lang.NotImplementedException;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -72,7 +73,7 @@ public class SleepWork implements Work {
     }
 
     @Override
-    public void doWork(RemoteBuildSession agentRemoteBuildSession, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
-
+    public BuildCommand toBuildCommand(URLService urlService) {
+        throw new NotImplementedException();
     }
 }
