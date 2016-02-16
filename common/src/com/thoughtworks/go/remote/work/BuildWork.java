@@ -302,15 +302,8 @@ public class BuildWork implements Work {
                         remoteBuildSession.addCommand(new BuildCommand("echo","Job started."));
                         remoteBuildSession.addCommand(createPrepareCommand());
                         remoteBuildSession.addCommand(createMainBuildCommand());
+                        remoteBuildSession.addCommand(new BuildCommand("reportCompleted").runIf("any"));
                         remoteBuildSession.end();
-                        remoteBuildSession.flush(new Callback<CommandResult>() {
-                            @Override
-                            public void call(CommandResult result) {
-                                JobResult jobResult = result.isSuccess() ? JobResult.Passed : JobResult.Failed;
-                                buildRepositoryRemote.reportCompleted(result.getAgentRuntimeInfo(), assignment.getPlan().getIdentifier(), jobResult);
-
-                            }
-                        });
                     }
                 });
 
@@ -320,32 +313,30 @@ public class BuildWork implements Work {
         List<BuildCommand> commands = new ArrayList<>();
 
         commands.add(new BuildCommand("echo", "Start to build"));
-        commands.add(new BuildCommand("report", JobState.Building.name()));
+        commands.add(new BuildCommand("reportCurrentStatus", JobState.Building.name()));
 
         commands.add(createBuildersCommand());
 
-        commands.add(new BuildCommand("echo", "Current job status: passed"));
-        BuildCommand echoFailed = new BuildCommand("echo", "Current job status: failed");
-        echoFailed.setRunIfConfig("failed");
-        commands.add(echoFailed);
+        commands.add(new BuildCommand("reportCompleting").runIf("any"));
 
-        commands.add(new BuildCommand("report", JobState.Completed.name()));
-        commands.add(new BuildCommand("echo", "Start to create properties"));
+        commands.add(new BuildCommand("echo", "Current job status: passed"));
+        commands.add(new BuildCommand("echo", "Current job status: failed").runIf("failed"));
+        commands.add(new BuildCommand("reportCurrentStatus", JobState.Completing.name()).runIf("any"));
+
+        commands.add(new BuildCommand("echo", "Start to create properties").runIf("any"));
 
         for (ArtifactPropertiesGenerator generator : getArtifactPropertiesGenerators()) {
             BuildCommand cmd = new BuildCommand("generateProperty", generator.getName(), generator.getSrc(), generator.getXpath());
             cmd.setWorkingDirectory(workingDirectory.getPath());
-            cmd.setRunIfConfig("any");
-            commands.add(cmd);
+            commands.add(cmd.runIf("any"));
         }
 
-        commands.add(new BuildCommand("echo", "Start to upload"));
+        commands.add(new BuildCommand("echo", "Start to upload").runIf("any"));
 
         for (ArtifactPlan ap : plan.getArtifactPlans()) {
             BuildCommand cmd = new BuildCommand("uploadArtifact", ap.getSrc(), ap.getDest());
-            cmd.setRunIfConfig("any");
             cmd.setWorkingDirectory(workingDirectory.getPath());
-            commands.add(cmd);
+            commands.add(cmd.runIf("any"));
         }
 
         List<String> testReportArgs = new ArrayList<>();
@@ -354,10 +345,9 @@ public class BuildWork implements Work {
         }
 
         BuildCommand uploadTests = new BuildCommand("generateTestReport", testReportArgs.toArray(new String[testReportArgs.size()]));
-        uploadTests.setRunIfConfig("any");
         uploadTests.setWorkingDirectory(workingDirectory.getPath());
 
-        commands.add(uploadTests);
+        commands.add(uploadTests.runIf("any"));
         return new BuildCommand("compose", commands);
     }
 
@@ -365,7 +355,7 @@ public class BuildWork implements Work {
         List<BuildCommand> commands = new ArrayList<>();
 
         commands.add(new BuildCommand("echo", "Start to prepare"));
-        commands.add(new BuildCommand("report", JobState.Preparing.name()));
+        commands.add(new BuildCommand("reportCurrentStatus", JobState.Preparing.name()));
 
         commands.add(new BuildCommand("export")); //dump env
 

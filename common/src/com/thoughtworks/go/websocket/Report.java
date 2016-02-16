@@ -42,10 +42,11 @@ public class Report implements Serializable {
         this.result = result;
     }
 
-    public Report(AgentRuntimeInfo agentRuntimeInfo, String buildId, JobState jobState) {
+    public Report(AgentRuntimeInfo agentRuntimeInfo, String buildId, JobState jobState, JobResult result) {
         this.agentRuntimeInfo = agentRuntimeInfo;
         this.buildId = buildId;
         this.jobState = jobState;
+        this.result = result;
     }
 
     public JobState getJobState() {

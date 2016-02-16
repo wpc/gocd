@@ -46,26 +46,20 @@ public class AgentRemoteBuildSession implements RemoteBuildSession {
                 });
     }
 
-    @Override
-    public void flush(final Callback<CommandResult> callback) {
-        BuildCommand compose = new BuildCommand("compose");
-        compose.setSubCommands(commands.toArray(new BuildCommand[commands.size()]));
-        agentRemoteHandler.sendMessageWithCallback(agentInstance.getUuid(),
-                new Message(Action.cmd, compose),
-                new Callback<Object>() {
-                    @Override
-                    public void call(Object commandResult) {
-                        callback.call((CommandResult) commandResult);
-                    }
-                });
-        commands = new ArrayList<>();
-    }
 
     @Override
     public void end() {
         BuildCommand end = new BuildCommand("end");
         end.setRunIfConfig("any");
         commands.add(end);
+        this.flush();
+    }
+
+    private void flush() {
+        BuildCommand compose = new BuildCommand("compose");
+        compose.setSubCommands(commands.toArray(new BuildCommand[commands.size()]));
+        agentRemoteHandler.sendMessage(agentInstance.getUuid(), new Message(Action.cmd, compose));
+        commands = new ArrayList<>();
     }
 
 

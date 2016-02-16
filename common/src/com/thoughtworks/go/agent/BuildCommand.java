@@ -9,6 +9,7 @@ import java.util.Map;
 
 public class BuildCommand {
 
+
     public static class Test {
         public final BuildCommand command;
         public final Boolean expectation;
@@ -119,5 +120,11 @@ public class BuildCommand {
     public void setRunIfConfig(String runIfConfig) {
         this.runIfConfig = runIfConfig;
     }
+
+    public BuildCommand runIf(String any) {
+        setRunIfConfig(any);
+        return this;
+    }
+
 
 }

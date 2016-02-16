@@ -37,7 +37,7 @@ public class BuildSession {
     private BuildSessionGoPublisher publisher;
 
     enum BulidCommandType {
-        start, end, echo, export, compose, exec, test, generateProperty, uploadArtifact, generateTestReport, downloadFile, downloadDir, report
+        start, end, echo, export, compose, exec, test, generateProperty, uploadArtifact, generateTestReport, downloadFile, downloadDir, reportCompleting, reportCompleted, reportCurrentStatus
     }
 
     private Map<String, String> envs = new HashMap<>();
@@ -55,7 +55,7 @@ public class BuildSession {
     }
 
     public CommandResult process(BuildCommand command) {
-        LOG.info("Processing build command {}", command);
+        LOG.debug("Processing build command {}", command);
         try {
 
             BulidCommandType type = BulidCommandType.valueOf(command.getName());
@@ -89,8 +89,12 @@ public class BuildSession {
                     return exec(command);
                 case test:
                     return test(command);
-                case report:
-                    return report(command);
+                case reportCurrentStatus:
+                    return reportCurrentStatus(command);
+                case reportCompleting:
+                    return reportCompleting();
+                case reportCompleted:
+                    return reportCompleted();
                 case generateProperty:
                     return generateProperty(command);
                 case downloadFile:
@@ -112,6 +116,7 @@ public class BuildSession {
             return new CommandResult(1, agentRuntimeInfo, e.getClass().getName() + ": " + e.getMessage());
         }
     }
+
 
     private CommandResult downloadDir(BuildCommand command) {
         String[] args = command.getStringArgs();
@@ -213,11 +218,24 @@ public class BuildSession {
         return successResult();
     }
 
-    private CommandResult report(BuildCommand command) {
+    private CommandResult reportCurrentStatus(BuildCommand command) {
         JobState jobState = JobState.valueOf((String) command.getArgs()[0]);
-        websocketService.send(new Message(Action.reportCurrentStatus, new Report(agentRuntimeInfo, buildId, jobState)));
+        websocketService.send(new Message(Action.reportCurrentStatus, new Report(agentRuntimeInfo, buildId, jobState, null)));
         return new CommandResult(0, agentRuntimeInfo);
     }
+
+    private CommandResult reportCompleted() {
+        JobResult result = this.buildPass ? JobResult.Passed : JobResult.Failed;
+        websocketService.send(new Message(Action.reportCompleted, new Report(agentRuntimeInfo, buildId, null, result)));
+        return successResult();
+    }
+
+    private CommandResult reportCompleting() {
+        JobResult result = this.buildPass ? JobResult.Passed : JobResult.Failed;
+        websocketService.send(new Message(Action.reportCompleting, new Report(agentRuntimeInfo, buildId, null, result)));
+        return successResult();
+    }
+
 
     private CommandResult test(BuildCommand command) {
         boolean success = false;
@@ -273,6 +291,7 @@ public class BuildSession {
     private CommandResult end() {
         agentRuntimeInfo.idle();
         buildPass = null;
+        console.stop();
         return successResult();
     }
 

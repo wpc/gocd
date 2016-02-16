@@ -17,7 +17,9 @@
 package com.thoughtworks.go.server.websocket;
 
 import com.thoughtworks.go.domain.AgentInstance;
+import com.thoughtworks.go.domain.JobIdentifier;
 import com.thoughtworks.go.domain.JobInstance;
+import com.thoughtworks.go.domain.JobState;
 import com.thoughtworks.go.remote.AgentInstruction;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
 import com.thoughtworks.go.remote.work.Callback;
@@ -93,21 +95,17 @@ public class AgentRemoteHandler {
                 break;
             case reportCurrentStatus:
                 Report report = (Report) msg.getData();
-                if (report.getJobIdentifier() == null && report.getBuildId() != null) {
-                    JobInstance instance = jobInstanceService.buildById(Long.valueOf(report.getBuildId()));
-                    if (instance == null) {
-                        return;
-                    }
-                    report.setJobIdentifier(instance.getIdentifier());
-                }
+                setJobIdentifierFromBuildId(report);
                 buildRepositoryRemote.reportCurrentStatus(report.getAgentRuntimeInfo(), report.getJobIdentifier(), report.getJobState());
                 break;
             case reportCompleting:
                 report = (Report) msg.getData();
+                setJobIdentifierFromBuildId(report);
                 buildRepositoryRemote.reportCompleting(report.getAgentRuntimeInfo(), report.getJobIdentifier(), report.getResult());
                 break;
             case reportCompleted:
                 report = (Report) msg.getData();
+                setJobIdentifierFromBuildId(report);
                 buildRepositoryRemote.reportCompleted(report.getAgentRuntimeInfo(), report.getJobIdentifier(), report.getResult());
                 break;
             case result:
@@ -127,6 +125,12 @@ public class AgentRemoteHandler {
         }
     }
 
+    private void setJobIdentifierFromBuildId(Report report) {
+        if (report.getJobIdentifier() == null && report.getBuildId() != null) {
+            JobInstance instance = jobInstanceService.buildById(Long.valueOf(report.getBuildId()));
+            report.setJobIdentifier(instance.getIdentifier());
+        }
+    }
 
 
     public void remove(Agent agent) {
@@ -166,5 +170,12 @@ public class AgentRemoteHandler {
             agent.send(msg);
         }
 
+    }
+
+    public void sendMessage(String uuid, Message message) {
+        Agent agent = agentSessions.get(uuid);
+        if (agent != null) {
+            agent.send(message);
+        }
     }
 }
