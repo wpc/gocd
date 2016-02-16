@@ -102,7 +102,7 @@ public class BuildSession {
                 case generateTestReport:
                     return generateTestReport(command);
                 case end:
-                    return end(command);
+                    return end();
                 default:
                     return new CommandResult(1, agentRuntimeInfo, "Unknown command: " + command.toString());
             }
@@ -118,18 +118,20 @@ public class BuildSession {
         final String url = args[0];
         final String src = args[1];
         final String dest = args[2];
+
         String checksumUrl = null;
-        String checksumFile = null;
-        if (args.length > 3) {
+        ChecksumFileHandler checksumFileHandler = null;
+
+        if (args.length > 4) {
             checksumUrl = args[3];
-            checksumFile = args[4];
+            checksumFileHandler = new ChecksumFileHandler(new File(args[4]));
         }
-        ChecksumFileHandler checksumFileHandler = new ChecksumFileHandler(new File(checksumFile));
+
         DirHandler handler = new DirHandler(src, new File(dest));
         DownloadAction downloadAction = new DownloadAction(httpService, publisher, new SystemTimeClock());
 
         try {
-            if (checksumUrl != null) {
+            if (checksumFileHandler != null) {
                 downloadAction.perform(checksumUrl, checksumFileHandler);
                 handler.useArtifactMd5Checksums(checksumFileHandler.getArtifactMd5Checksums());
             }
@@ -146,13 +148,15 @@ public class BuildSession {
         final String url = args[0];
         final String src = args[1];
         final String dest = args[2];
+
         String checksumUrl = null;
-        String checksumFile = null;
-        if (args.length > 3) {
+        ChecksumFileHandler checksumFileHandler = null;
+
+        if (args.length > 4) {
             checksumUrl = args[3];
-            checksumFile = args[4];
+            checksumFileHandler = new ChecksumFileHandler(new File(args[4]));
         }
-        ChecksumFileHandler checksumFileHandler = new ChecksumFileHandler(new File(checksumFile));
+
         FileHandler handler = new FileHandler(new File(dest), src);
         DownloadAction downloadAction = new DownloadAction(httpService, publisher, new SystemTimeClock());
 
@@ -212,7 +216,6 @@ public class BuildSession {
     private CommandResult report(BuildCommand command) {
         JobState jobState = JobState.valueOf((String) command.getArgs()[0]);
         websocketService.send(new Message(Action.reportCurrentStatus, new Report(agentRuntimeInfo, buildId, jobState)));
-        ;
         return new CommandResult(0, agentRuntimeInfo);
     }
 
@@ -267,7 +270,7 @@ public class BuildSession {
         }
     }
 
-    private CommandResult end(BuildCommand command) {
+    private CommandResult end() {
         agentRuntimeInfo.idle();
         buildPass = null;
         return successResult();
