@@ -45,6 +45,11 @@ public class BuildCommand {
         this.subCommands = subCommands.toArray(new BuildCommand[subCommands.size()]);
     }
 
+    public BuildCommand(String name, BuildCommand... subCommand) {
+        this(name);
+        this.subCommands = subCommand;
+    }
+
     public BuildCommand(String name, String... args) {
         this.name = name;
         this.args = args;

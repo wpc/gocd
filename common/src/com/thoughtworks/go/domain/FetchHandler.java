@@ -21,13 +21,14 @@ import java.io.InputStream;
 import java.io.Serializable;
 
 import com.thoughtworks.go.work.DefaultGoPublisher;
+import com.thoughtworks.go.work.GoPublisher;
 
 public interface FetchHandler extends Serializable {
     String url(String remoteHost, String workingUrl) throws IOException;
 
     void handle(InputStream stream) throws IOException;
 
-    boolean handleResult(int returncode, DefaultGoPublisher goPublisher);
+    boolean handleResult(int returncode, GoPublisher goPublisher);
 
     void useArtifactMd5Checksums(ArtifactMd5Checksums artifactMd5Checksums);
 }

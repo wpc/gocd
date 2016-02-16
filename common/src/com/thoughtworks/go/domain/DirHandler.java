@@ -27,11 +27,16 @@ import com.thoughtworks.go.util.FileUtil;
 import com.thoughtworks.go.util.ZipUtil;
 import com.thoughtworks.go.validation.ChecksumValidator;
 import com.thoughtworks.go.work.DefaultGoPublisher;
+import com.thoughtworks.go.work.GoPublisher;
 import org.apache.log4j.Logger;
 
 import static com.thoughtworks.go.util.CachedDigestUtils.md5Hex;
 
 public class DirHandler implements FetchHandler {
+    public String getSrcFile() {
+        return srcFile;
+    }
+
     private final String srcFile;
     private final File destOnAgent;
     private static final Logger LOG = Logger.getLogger(DirHandler.class);
@@ -67,7 +72,7 @@ public class DirHandler implements FetchHandler {
         return FileUtil.normalizePath(new File(parent, entry.getName()).getPath());
     }
 
-    public boolean handleResult(int httpCode, DefaultGoPublisher goPublisher) {
+    public boolean handleResult(int httpCode, GoPublisher goPublisher) {
         checksumValidationPublisher.publish(httpCode, destOnAgent, goPublisher);
         return httpCode < HttpServletResponse.SC_BAD_REQUEST;
     }
@@ -102,5 +107,10 @@ public class DirHandler implements FetchHandler {
         int result = srcFile != null ? srcFile.hashCode() : 0;
         result = 31 * result + (destOnAgent != null ? destOnAgent.hashCode() : 0);
         return result;
+    }
+
+
+    public File getDestOnAgent() {
+        return destOnAgent;
     }
 }

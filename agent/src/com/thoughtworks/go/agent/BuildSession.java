@@ -2,9 +2,7 @@ package com.thoughtworks.go.agent;
 
 import com.thoughtworks.go.agent.service.AgentWebsocketService;
 import com.thoughtworks.go.config.ArtifactPlan;
-import com.thoughtworks.go.domain.ArtifactType;
-import com.thoughtworks.go.domain.JobState;
-import com.thoughtworks.go.domain.Property;
+import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.exception.ArtifactPublishingException;
 import com.thoughtworks.go.publishers.GoArtifactsManipulator;
 import com.thoughtworks.go.remote.work.ConsoleOutputTransmitter;
@@ -25,10 +23,10 @@ import org.slf4j.LoggerFactory;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
-import static com.thoughtworks.go.util.ExceptionUtils.bomb;
-import static com.thoughtworks.go.util.FileUtil.normalizePath;
 import static java.lang.String.format;
 
 public class BuildSession {
@@ -39,7 +37,7 @@ public class BuildSession {
     private BuildSessionGoPublisher publisher;
 
     enum BulidCommandType {
-        start, end, echo, export, compose, exec, test, generateProperty, uploadArtifact, generateTestReport, report
+        start, end, echo, export, compose, exec, test, generateProperty, uploadArtifact, generateTestReport, downloadFile, downloadDir, report
     }
 
     private Map<String, String> envs = new HashMap<>();
@@ -62,7 +60,7 @@ public class BuildSession {
 
             BulidCommandType type = BulidCommandType.valueOf(command.getName());
 
-            if(buildPass != null ) {
+            if (buildPass != null) {
                 if ("passed".equals(command.getRunIfConfig()) && !this.buildPass) {
                     return new CommandResult(0, agentRuntimeInfo);
                 } else if ("failed".equals(command.getRunIfConfig()) && this.buildPass) {
@@ -71,9 +69,9 @@ public class BuildSession {
             }
 
             BuildCommand.Test test = command.getTest();
-            if(test != null) {
+            if (test != null) {
                 CommandResult testResult = process(test.command);
-                if(testResult.isSuccess() != test.expectation) {
+                if (testResult.isSuccess() != test.expectation) {
                     return new CommandResult(0, agentRuntimeInfo);
                 }
             }
@@ -95,6 +93,10 @@ public class BuildSession {
                     return report(command);
                 case generateProperty:
                     return generateProperty(command);
+                case downloadFile:
+                    return downloadFile(command);
+                case downloadDir:
+                    return downloadDir(command);
                 case uploadArtifact:
                     return uploadArtifact(command);
                 case generateTestReport:
@@ -109,6 +111,61 @@ public class BuildSession {
             agentRuntimeInfo.idle();
             return new CommandResult(1, agentRuntimeInfo, e.getClass().getName() + ": " + e.getMessage());
         }
+    }
+
+    private CommandResult downloadDir(BuildCommand command) {
+        String[] args = command.getStringArgs();
+        final String url = args[0];
+        final String src = args[1];
+        final String dest = args[2];
+        String checksumUrl = null;
+        String checksumFile = null;
+        if (args.length > 3) {
+            checksumUrl = args[3];
+            checksumFile = args[4];
+        }
+        ChecksumFileHandler checksumFileHandler = new ChecksumFileHandler(new File(checksumFile));
+        DirHandler handler = new DirHandler(src, new File(dest));
+        DownloadAction downloadAction = new DownloadAction(httpService, publisher, new SystemTimeClock());
+
+        try {
+            if (checksumUrl != null) {
+                downloadAction.perform(checksumUrl, checksumFileHandler);
+                handler.useArtifactMd5Checksums(checksumFileHandler.getArtifactMd5Checksums());
+            }
+
+            downloadAction.perform(url, handler);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("download interrupted");
+        }
+        return successResult();
+    }
+
+    private CommandResult downloadFile(BuildCommand command) {
+        String[] args = command.getStringArgs();
+        final String url = args[0];
+        final String src = args[1];
+        final String dest = args[2];
+        String checksumUrl = null;
+        String checksumFile = null;
+        if (args.length > 3) {
+            checksumUrl = args[3];
+            checksumFile = args[4];
+        }
+        ChecksumFileHandler checksumFileHandler = new ChecksumFileHandler(new File(checksumFile));
+        FileHandler handler = new FileHandler(new File(dest), src);
+        DownloadAction downloadAction = new DownloadAction(httpService, publisher, new SystemTimeClock());
+
+        try {
+            if (checksumUrl != null) {
+                downloadAction.perform(checksumUrl, checksumFileHandler);
+                handler.useArtifactMd5Checksums(checksumFileHandler.getArtifactMd5Checksums());
+            }
+            downloadAction.perform(url, handler);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("download interrupted");
+        }
+        return successResult();
     }
 
     private CommandResult generateTestReport(BuildCommand command) {
@@ -154,13 +211,14 @@ public class BuildSession {
 
     private CommandResult report(BuildCommand command) {
         JobState jobState = JobState.valueOf((String) command.getArgs()[0]);
-        websocketService.send(new Message(Action.reportCurrentStatus, new Report(agentRuntimeInfo, buildId, jobState)));;
+        websocketService.send(new Message(Action.reportCurrentStatus, new Report(agentRuntimeInfo, buildId, jobState)));
+        ;
         return new CommandResult(0, agentRuntimeInfo);
     }
 
     private CommandResult test(BuildCommand command) {
         boolean success = false;
-        if(command.getArgs()[0].equals("-d")) {
+        if (command.getArgs()[0].equals("-d")) {
             success = new File((String) command.getArgs()[1]).isDirectory();
         }
         return new CommandResult(success ? 0 : 1, agentRuntimeInfo);
@@ -170,7 +228,7 @@ public class BuildSession {
         String execCommand = (String) command.getArgs()[0];
         CommandLine commandLine = CommandLine.createCommandLine(execCommand);
 
-        if(command.getWorkingDirectory() != null) {
+        if (command.getWorkingDirectory() != null) {
             commandLine.withWorkingDir(new File(command.getWorkingDirectory()));
         }
 
@@ -187,7 +245,7 @@ public class BuildSession {
         for (BuildCommand arg : command.getSubCommands()) {
             CommandResult childResult = process(arg);
             result.addChild(childResult);
-            if(!childResult.isSuccess()) {
+            if (!childResult.isSuccess()) {
                 result.setExitCode(1);
                 buildPass = false;
             }
@@ -196,7 +254,7 @@ public class BuildSession {
     }
 
     private CommandResult export(BuildCommand command) {
-        if(command.getArgs().length > 0) {
+        if (command.getArgs().length > 0) {
             Map<String, String> vars = (Map<String, String>) command.getArgs()[0];
             envs.putAll(vars);
             return successResult();

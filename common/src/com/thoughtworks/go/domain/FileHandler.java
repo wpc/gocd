@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.thoughtworks.go.util.StringUtil;
 import com.thoughtworks.go.validation.ChecksumValidator;
 import com.thoughtworks.go.work.DefaultGoPublisher;
+import com.thoughtworks.go.work.GoPublisher;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
@@ -36,6 +37,15 @@ import static com.thoughtworks.go.util.CachedDigestUtils.md5Hex;
 public class FileHandler implements FetchHandler {
 
     private final File artifact;
+
+    public String getSrcFile() {
+        return srcFile;
+    }
+
+    public File getArtifact() {
+        return artifact;
+    }
+
     private final String srcFile;
     private static final Logger LOG = Logger.getLogger(FileHandler.class);
     private ArtifactMd5Checksums artifactMd5Checksums;
@@ -92,9 +102,8 @@ public class FileHandler implements FetchHandler {
         }
     }
 
-    public boolean handleResult(int httpCode, DefaultGoPublisher goPublisher) {
+    public boolean handleResult(int httpCode, GoPublisher goPublisher) {
         checksumValidationPublisher.publish(httpCode, artifact, goPublisher);
-
         return httpCode < HttpServletResponse.SC_BAD_REQUEST;
     }
 
@@ -124,4 +133,6 @@ public class FileHandler implements FetchHandler {
     public int hashCode() {
         return artifact != null ? artifact.hashCode() : 0;
     }
+
+
 }

@@ -24,6 +24,7 @@ import java.util.Set;
 import javax.servlet.http.HttpServletResponse;
 
 import com.thoughtworks.go.work.DefaultGoPublisher;
+import com.thoughtworks.go.work.GoPublisher;
 
 public class ChecksumValidationPublisher implements com.thoughtworks.go.agent.ChecksumValidationPublisher, Serializable {
     private Set<String> md5NotFoundPaths = new HashSet<String>();
@@ -45,7 +46,7 @@ public class ChecksumValidationPublisher implements com.thoughtworks.go.agent.Ch
         md5ChecksumFileWasNotFound = true;
     }
 
-    public void publish(int httpCode, File artifact, DefaultGoPublisher goPublisher) {
+    public void publish(int httpCode, File artifact, GoPublisher goPublisher) {
         if (!this.md5MismatchPaths.isEmpty()) {
             String mismatchedFilePath = md5MismatchPaths.iterator().next();
             goPublisher.consumeLineWithPrefix(
