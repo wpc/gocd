@@ -23,12 +23,15 @@ import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.domain.MaterialInstance;
 import com.thoughtworks.go.domain.MaterialRevision;
+import com.thoughtworks.go.domain.config.Configuration;
 import com.thoughtworks.go.domain.config.ConfigurationProperty;
 import com.thoughtworks.go.domain.materials.*;
 import com.thoughtworks.go.domain.materials.scm.PluggableSCMMaterialInstance;
 import com.thoughtworks.go.domain.materials.scm.PluggableSCMMaterialRevision;
 import com.thoughtworks.go.domain.scm.SCM;
-import com.thoughtworks.go.plugin.access.scm.SCMMetadataStore;
+import com.thoughtworks.go.plugin.access.common.handler.JSONResultMessageHandler;
+import com.thoughtworks.go.plugin.access.scm.*;
+import com.thoughtworks.go.plugin.access.scm.revision.SCMRevision;
 import com.thoughtworks.go.util.StringUtil;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
@@ -37,7 +40,9 @@ import com.thoughtworks.go.util.json.JsonHelper;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -161,9 +166,26 @@ public class PluggableSCMMaterial extends AbstractMaterial {
     }
 
     @Override
-    public BuildCommand updateTo(Revision revision, File baseDir) {
-        return new BuildCommand("compose");
+    public BuildCommand updateTo(MaterialRevision revision, SCMExtension scmExtension, File baseDir) {
+        Modification latestModification = revision.getLatestModification();
+        SCMRevision scmRevision = new SCMRevision(latestModification.getRevision(), latestModification.getModifiedTime(), null, null, latestModification.getAdditionalDataMap(), null);
+        File destinationFolder = workingDirectory(baseDir);
+        return scmExtension.buildCheckoutCommand(getScmConfig().getPluginConfiguration().getId(),
+                buildSCMPropertyConfigurations(getScmConfig()), destinationFolder.getPath(), scmRevision);
     }
+
+    private SCMPropertyConfiguration buildSCMPropertyConfigurations(SCM scmConfig) {
+        SCMPropertyConfiguration scmPropertyConfiguration = new SCMPropertyConfiguration();
+        populateConfiguration(scmConfig.getConfiguration(), scmPropertyConfiguration);
+        return scmPropertyConfiguration;
+    }
+
+    private void populateConfiguration(Configuration configuration, com.thoughtworks.go.plugin.api.config.Configuration pluginConfiguration) {
+        for (ConfigurationProperty configurationProperty : configuration) {
+            pluginConfiguration.add(new SCMProperty(configurationProperty.getConfigurationKey().getName(), configurationProperty.getValue()));
+        }
+    }
+
 
     @Override
     public void toJson(Map jsonMap, Revision revision) {

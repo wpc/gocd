@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.plugin.access.scm;
 
+import com.thoughtworks.go.agent.BuildCommand;
 import com.thoughtworks.go.plugin.access.DefaultPluginInteractionCallback;
 import com.thoughtworks.go.plugin.access.PluginRequestHelper;
 import com.thoughtworks.go.plugin.access.common.settings.AbstractExtension;
@@ -153,5 +154,18 @@ public class SCMExtension extends AbstractExtension implements SCMExtensionContr
 
     Map<String, JsonMessageHandler> getMessageHandlerMap() {
         return messageHandlerMap;
+    }
+
+    public BuildCommand buildCheckoutCommand(String pluginId, SCMPropertyConfiguration scmConfiguration, String destinationFolder, SCMRevision revision) {
+        String resolvedExtensionVersion = pluginManager.resolveExtensionVersion(pluginId, goSupportedVersions);
+        String requestBody = messageHandlerMap.get(resolvedExtensionVersion).requestMessageForCheckout(scmConfiguration, destinationFolder, revision);
+        HashMap<String, String> extCall = new HashMap<>();
+        extCall.put("name", EXTENSION_NAME);
+        extCall.put("pluginId", pluginId);
+        extCall.put("extensionVersion", resolvedExtensionVersion);
+        extCall.put("requestName", REQUEST_CHECKOUT);
+        extCall.put("requestBody", requestBody);
+        extCall.put("requestParams", null);
+        return new BuildCommand("callExtension", extCall);
     }
 }

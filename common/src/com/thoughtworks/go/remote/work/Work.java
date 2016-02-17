@@ -40,5 +40,5 @@ public interface Work extends Serializable {
     String description();
 
     void cancel(EnvironmentVariableContext environmentVariableContext, AgentRuntimeInfo agentruntimeInfo);
-    BuildCommand toBuildCommand(URLService urlService);
+    BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension);
 }

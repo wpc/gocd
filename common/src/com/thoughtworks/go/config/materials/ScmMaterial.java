@@ -21,6 +21,7 @@ import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.domain.MaterialRevision;
 import com.thoughtworks.go.domain.materials.*;
+import com.thoughtworks.go.plugin.access.scm.SCMExtension;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.util.command.InMemoryStreamConsumer;
 import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
@@ -229,7 +230,7 @@ public abstract class ScmMaterial extends AbstractMaterial {
     }
 
     @Override
-    public BuildCommand updateTo(Revision revision, File baseDir) {
+    public BuildCommand updateTo(MaterialRevision revision, SCMExtension scmExtension, File baseDir) {
         throw new NotImplementedException("under construction");
     }
 }

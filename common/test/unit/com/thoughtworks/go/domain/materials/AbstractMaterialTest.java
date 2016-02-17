@@ -22,6 +22,7 @@ import com.thoughtworks.go.config.materials.AbstractMaterial;
 import com.thoughtworks.go.config.materials.SubprocessExecutionContext;
 import com.thoughtworks.go.domain.MaterialInstance;
 import com.thoughtworks.go.domain.MaterialRevision;
+import com.thoughtworks.go.plugin.access.scm.SCMExtension;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
 
@@ -70,7 +71,7 @@ public class AbstractMaterialTest {
         }
 
         @Override
-        public BuildCommand updateTo(Revision revision, File baseDir) {
+        public BuildCommand updateTo(MaterialRevision revision, SCMExtension scmExtension, File baseDir) {
             throw new UnsupportedOperationException();
         }
 

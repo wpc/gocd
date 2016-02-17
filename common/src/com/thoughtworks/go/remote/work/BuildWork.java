@@ -273,10 +273,11 @@ public class BuildWork implements Work {
     }
 
     @Override
-    public BuildCommand toBuildCommand(URLService urlService) {
+    public BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension) {
         this.plan = assignment.getPlan();
         this.materialRevisions = assignment.materialRevisions();
         this.workingDirectory = assignment.getWorkingDirectory();
+
         final EnvironmentVariableContext envContext = assignment.initialEnvironmentVariableContext();
         setupEnvrionmentContext(envContext);
         plan.applyTo(envContext);
@@ -297,7 +298,7 @@ public class BuildWork implements Work {
 
         commands.add(new BuildCommand("export", envContext.getProperties()));
         commands.add(new BuildCommand("echo", "Job started."));
-        commands.add(createPrepareCommand());
+        commands.add(createPrepareCommand(scmExtension));
         commands.add(createMainBuildCommand());
         commands.add(new BuildCommand("reportCompleted").runIf("any"));
         commands.add(new BuildCommand("end").runIf("any"));
@@ -347,7 +348,7 @@ public class BuildWork implements Work {
         return new BuildCommand("compose", commands);
     }
 
-    private BuildCommand createPrepareCommand() {
+    private BuildCommand createPrepareCommand(SCMExtension scmExtension) {
         List<BuildCommand> commands = new ArrayList<>();
 
         commands.add(new BuildCommand("echo", "Start to prepare"));
@@ -359,9 +360,8 @@ public class BuildWork implements Work {
             commands.add(new BuildCommand("echo", "Skipping material update since stage is configured not to fetch materials"));
         } else {
             commands.add(new BuildCommand("echo", "Start to update materials.\n"));
-            for (MaterialRevision revision : materialRevisions.getRevisions()) {
-                commands.add(revision.getMaterial().updateTo(revision.getRevision(), workingDirectory));
-            }
+            for (MaterialRevision revision : materialRevisions.getRevisions())
+                commands.add(revision.getMaterial().updateTo(revision, scmExtension, workingDirectory));
         }
         return new BuildCommand("compose", commands);
     }

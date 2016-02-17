@@ -4,6 +4,8 @@ import com.thoughtworks.go.agent.service.AgentWebsocketService;
 import com.thoughtworks.go.config.ArtifactPlan;
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.exception.ArtifactPublishingException;
+import com.thoughtworks.go.plugin.access.PluginRequestHelper;
+import com.thoughtworks.go.plugin.infra.PluginManager;
 import com.thoughtworks.go.publishers.GoArtifactsManipulator;
 import com.thoughtworks.go.remote.work.ConsoleOutputTransmitter;
 import com.thoughtworks.go.remote.work.RemoteConsoleAppender;
@@ -37,7 +39,7 @@ public class BuildSession {
     private BuildSessionGoPublisher publisher;
 
     enum BulidCommandType {
-        start, end, echo, export, compose, exec, test, generateProperty, uploadArtifact, generateTestReport, downloadFile, downloadDir, reportCompleting, reportCompleted, reportCurrentStatus
+        start, end, echo, export, compose, exec, test, generateProperty, uploadArtifact, generateTestReport, downloadFile, downloadDir, reportCompleting, reportCompleted, callExtension, reportCurrentStatus
     }
 
     private Map<String, String> envs = new HashMap<>();
@@ -45,11 +47,14 @@ public class BuildSession {
     private HttpService httpService;
     private Boolean buildPass;
     private final AgentWebsocketService websocketService;
+    private PluginManager pluginManager;
 
-    public BuildSession(AgentRuntimeInfo agentRuntimeInfo, HttpService httpService, AgentWebsocketService websocketService) {
+    public BuildSession(AgentRuntimeInfo agentRuntimeInfo, HttpService httpService, AgentWebsocketService websocketService, PluginManager pluginManager) {
         this.agentRuntimeInfo = agentRuntimeInfo;
         this.httpService = httpService;
         this.websocketService = websocketService;
+        this.pluginManager = pluginManager;
+
     }
 
     public boolean process(BuildCommand command) {
@@ -100,6 +105,8 @@ public class BuildSession {
                     return uploadArtifact(command);
                 case generateTestReport:
                     return generateTestReport(command);
+                case callExtension:
+                    return callExtension(command);
                 case end:
                     return end();
                 default:
@@ -109,6 +116,20 @@ public class BuildSession {
             LOG.error("Processing error: ", e);
             return false;
         }
+    }
+
+    private boolean callExtension(BuildCommand command) {
+        Map<String, Object> callParams = (Map<String, Object>) command.getArgs()[0];
+        PluginRequestHelper pluginRequestHelper = new PluginRequestHelper(pluginManager,
+                null, (String) callParams.get("name"));
+
+        pluginRequestHelper.submitRequest(
+                (String) callParams.get("pluginId"),
+                (String) callParams.get("requestName"),
+                (String) callParams.get("extensionVersion"),
+                (String) callParams.get("requestBody"),
+                (Map<String, String>) callParams.get("requestParams"));
+        return true;
     }
 
 

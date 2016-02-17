@@ -51,7 +51,7 @@ public class DeniedAgentWork implements Work {
     }
 
     @Override
-    public BuildCommand toBuildCommand(URLService urlService) {
+    public BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension) {
         throw new RuntimeException("should never be called");
     }
 }

@@ -21,6 +21,7 @@ import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.builder.Builder;
 import com.thoughtworks.go.listener.PipelineConfigChangedListener;
+import com.thoughtworks.go.plugin.access.scm.SCMExtension;
 import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
 import com.thoughtworks.go.remote.work.*;
@@ -67,14 +68,14 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
     private final UpstreamPipelineResolver resolver;
     private final BuilderFactory builderFactory;
     private AgentRemoteHandler agentRemoteHandler;
-    private BuildRepositoryRemote buildRepositoryRemote;
     private URLService urlService;
+    private SCMExtension scmExtension;
 
     @Autowired
     public BuildAssignmentService(GoConfigService goConfigService, JobInstanceService jobInstanceService, ScheduleService scheduleService,
                                   AgentService agentService, EnvironmentConfigService environmentConfigService,
                                   TransactionTemplate transactionTemplate, ScheduledPipelineLoader scheduledPipelineLoader, PipelineService pipelineService, BuilderFactory builderFactory,
-                                  AgentRemoteHandler agentRemoteHandler, BuildRepositoryRemote buildRepositoryRemote, URLService urlService) {
+                                  AgentRemoteHandler agentRemoteHandler, URLService urlService, SCMExtension scmExtension) {
         this.goConfigService = goConfigService;
         this.jobInstanceService = jobInstanceService;
         this.scheduleService = scheduleService;
@@ -85,8 +86,8 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
         this.resolver = pipelineService;
         this.builderFactory = builderFactory;
         this.agentRemoteHandler = agentRemoteHandler;
-        this.buildRepositoryRemote = buildRepositoryRemote;
         this.urlService = urlService;
+        this.scmExtension = scmExtension;
     }
 
     public void initialize() {
@@ -164,7 +165,7 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
             }
             Work work = assignWorkToAgent(agentInstance);
             if (work != NO_WORK) {
-                agent.send(new Message(Action.cmd, work.toBuildCommand(urlService)));
+                agent.send(new Message(Action.cmd, work.toBuildCommand(urlService, scmExtension)));
             }
         }
         if (LOGGER.isDebugEnabled()) {

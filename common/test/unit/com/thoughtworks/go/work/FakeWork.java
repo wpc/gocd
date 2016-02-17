@@ -49,7 +49,7 @@ public class FakeWork implements Work {
     }
 
     @Override
-    public BuildCommand toBuildCommand(URLService urlService) {
+    public BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension) {
         return new BuildCommand("compose");
     }
 }

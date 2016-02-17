@@ -73,7 +73,7 @@ public class SleepWork implements Work {
     }
 
     @Override
-    public BuildCommand toBuildCommand(URLService urlService) {
+    public BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension) {
         throw new NotImplementedException();
     }
 }

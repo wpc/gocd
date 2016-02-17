@@ -43,10 +43,7 @@ import com.thoughtworks.go.util.SystemEnvironment;
 import com.thoughtworks.go.util.SystemUtil;
 import com.thoughtworks.go.websocket.Action;
 import com.thoughtworks.go.websocket.Message;
-<<<<<<< HEAD
 import com.thoughtworks.go.websocket.MessageCallback;
-=======
->>>>>>> rename refactoring
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,6 +76,7 @@ public class AgentController {
     private SubprocessLogger subprocessLogger;
     private final SystemEnvironment systemEnvironment;
     private AgentUpgradeService agentUpgradeService;
+    private PluginManager pluginManager;
     private PackageAsRepositoryExtension packageAsRepositoryExtension;
     private SCMExtension scmExtension;
     private TaskExtension taskExtension;
@@ -94,6 +92,7 @@ public class AgentController {
                            AgentWebsocketService websocketService,
                            HttpService httpService) {
         this.agentUpgradeService = agentUpgradeService;
+        this.pluginManager = pluginManager;
         this.packageAsRepositoryExtension = packageAsRepositoryExtension;
         this.scmExtension = scmExtension;
         this.taskExtension = taskExtension;
@@ -122,7 +121,7 @@ public class AgentController {
             agentRuntimeInfo = AgentRuntimeInfo.fromAgent(identifier, AgentStatus.Idle.getRuntimeStatus(), currentWorkingDirectory(), systemEnvironment.getAgentLauncherVersion());
         }
 
-        this.buildSession = new BuildSession(agentRuntimeInfo, httpService, websocketService);
+        this.buildSession = new BuildSession(agentRuntimeInfo, httpService, websocketService, pluginManager);
 
         subprocessLogger.registerAsExitHook("Following processes were alive at shutdown: ");
     }

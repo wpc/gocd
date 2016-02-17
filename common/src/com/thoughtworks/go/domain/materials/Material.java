@@ -22,6 +22,7 @@ import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.config.materials.SubprocessExecutionContext;
 import com.thoughtworks.go.domain.MaterialInstance;
 import com.thoughtworks.go.domain.MaterialRevision;
+import com.thoughtworks.go.plugin.access.scm.SCMExtension;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
 
@@ -46,7 +47,7 @@ public interface Material extends Serializable {
     //scm.findRecentModifications(5)
 
     void updateTo(ProcessOutputStreamConsumer outputStreamConsumer, File baseDir, RevisionContext revisionContext, final SubprocessExecutionContext execCtx);
-    BuildCommand updateTo(Revision revision, File baseDir);
+    BuildCommand updateTo(MaterialRevision revision, SCMExtension scmExtension, File baseDir);
 
     void toJson(Map jsonMap, Revision revision);
 

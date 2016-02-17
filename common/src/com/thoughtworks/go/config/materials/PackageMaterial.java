@@ -28,6 +28,7 @@ import com.thoughtworks.go.domain.materials.*;
 import com.thoughtworks.go.domain.materials.packagematerial.PackageMaterialInstance;
 import com.thoughtworks.go.domain.materials.packagematerial.PackageMaterialRevision;
 import com.thoughtworks.go.domain.packagerepository.PackageDefinition;
+import com.thoughtworks.go.plugin.access.scm.SCMExtension;
 import com.thoughtworks.go.util.StringUtil;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
@@ -123,7 +124,7 @@ public class PackageMaterial extends AbstractMaterial {
     }
 
     @Override
-    public BuildCommand updateTo(Revision revision, File baseDir) {
+    public BuildCommand updateTo(MaterialRevision revision, SCMExtension scmExtension, File baseDir) {
         return new BuildCommand("compose");
     }
 
