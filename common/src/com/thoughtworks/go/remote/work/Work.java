@@ -18,7 +18,7 @@ package com.thoughtworks.go.remote.work;
 
 import java.io.Serializable;
 
-import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
@@ -40,5 +40,5 @@ public interface Work extends Serializable {
     String description();
 
     void cancel(EnvironmentVariableContext environmentVariableContext, AgentRuntimeInfo agentruntimeInfo);
-    BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension);
+    BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension, TaskExtension taskExtension);
 }

@@ -16,15 +16,23 @@
 
 package com.thoughtworks.go.plugin.access.pluggabletask;
 
+import com.thoughtworks.go.plugin.access.common.handler.JSONResultMessageHandler;
 import com.thoughtworks.go.plugin.access.common.settings.PluginSettingsConfiguration;
+import com.thoughtworks.go.plugin.api.BuildCommand;
+import com.thoughtworks.go.plugin.api.config.Property;
 import com.thoughtworks.go.plugin.api.response.execution.ExecutionResult;
 import com.thoughtworks.go.plugin.api.response.validation.ValidationResult;
 import com.thoughtworks.go.plugin.api.task.Task;
 import com.thoughtworks.go.plugin.api.task.TaskConfig;
+import com.thoughtworks.go.plugin.api.task.TaskExecutionContext;
 import com.thoughtworks.go.plugin.infra.Action;
 import com.thoughtworks.go.plugin.infra.ActionWithReturn;
 import com.thoughtworks.go.plugin.infra.PluginManager;
 import com.thoughtworks.go.plugin.infra.plugininfo.GoPluginDescriptor;
+import org.apache.commons.lang.NotImplementedException;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Deprecated
 class ApiBasedTaskExtension implements TaskExtensionContract {
@@ -67,5 +75,16 @@ class ApiBasedTaskExtension implements TaskExtensionContract {
                 return task.validate(taskConfig);
             }
         });
+    }
+
+    @Override
+    public BuildCommand taskBuildCommand(String pluginId, TaskConfig taskConfig, TaskExecutionContext taskExecutionContext) {
+        Map config = new JSONResultMessageHandler().configurationToMap(taskConfig);
+        Map<String, Object> args = new HashMap<>();
+        args.put("pluginId", pluginId);
+        args.put("workingDir", taskExecutionContext.workingDir());
+        args.put("taskConfig", config);
+        args.put("environmentVariables", taskExecutionContext.environment().asMap());
+        return new BuildCommand("callAPIBasedTaskExtension", args);
     }
 }

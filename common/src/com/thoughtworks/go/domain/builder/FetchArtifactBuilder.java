@@ -18,10 +18,9 @@
 
 package com.thoughtworks.go.domain.builder;
 
-import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
-import com.thoughtworks.go.util.ArtifactLogUtil;
 import com.thoughtworks.go.util.URLService;
 import com.thoughtworks.go.util.command.CruiseControlException;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
@@ -56,7 +55,7 @@ public class FetchArtifactBuilder extends Builder {
     }
 
     @Override
-    public BuildCommand buildCommand(TaskExtension taskExtension) {
+    public BuildCommand buildCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
         URLService urlService = new URLService();
         String artifactUrl;
         String checksumUrl;

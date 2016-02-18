@@ -27,6 +27,7 @@ import com.thoughtworks.go.domain.exception.UnregisteredAgentException;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.plugin.infra.PluginManager;
 import com.thoughtworks.go.plugin.infra.PluginManagerReference;
 import com.thoughtworks.go.publishers.GoArtifactsManipulator;
@@ -121,7 +122,7 @@ public class AgentController {
             agentRuntimeInfo = AgentRuntimeInfo.fromAgent(identifier, AgentStatus.Idle.getRuntimeStatus(), currentWorkingDirectory(), systemEnvironment.getAgentLauncherVersion());
         }
 
-        this.buildSession = new BuildSession(agentRuntimeInfo, httpService, websocketService, pluginManager);
+        this.buildSession = new BuildSession(agentRuntimeInfo, httpService, websocketService, pluginManager, taskExtension);
 
         subprocessLogger.registerAsExitHook("Following processes were alive at shutdown: ");
     }

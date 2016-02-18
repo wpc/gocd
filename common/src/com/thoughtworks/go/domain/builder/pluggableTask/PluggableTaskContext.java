@@ -22,14 +22,15 @@ import com.thoughtworks.go.work.DefaultGoPublisher;
 import com.thoughtworks.go.plugin.api.task.Console;
 import com.thoughtworks.go.plugin.api.task.EnvironmentVariables;
 import com.thoughtworks.go.plugin.api.task.TaskExecutionContext;
+import com.thoughtworks.go.work.GoPublisher;
 
 public class PluggableTaskContext implements TaskExecutionContext {
     private final BuildLogElement buildLogElement;
-    private final DefaultGoPublisher publisher;
+    private final GoPublisher publisher;
     private final EnvironmentVariableContext environmentVariableContext;
     private final String workingDir;
 
-    public PluggableTaskContext(BuildLogElement buildLogElement, DefaultGoPublisher publisher,
+    public PluggableTaskContext(BuildLogElement buildLogElement, GoPublisher publisher,
                                 EnvironmentVariableContext environmentVariableContext, String workingDir) {
         this.buildLogElement = buildLogElement;
         this.publisher = publisher;

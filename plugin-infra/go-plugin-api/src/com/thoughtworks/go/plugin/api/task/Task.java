@@ -68,4 +68,5 @@ public interface Task {
      */
     @UsedOnGoServer
     ValidationResult validate(TaskConfig configuration);
+
 }

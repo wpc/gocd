@@ -16,7 +16,7 @@
 
 package com.thoughtworks.go.domain.materials;
 
-import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.config.PipelineConfig;
 import com.thoughtworks.go.config.materials.AbstractMaterial;
 import com.thoughtworks.go.config.materials.SubprocessExecutionContext;

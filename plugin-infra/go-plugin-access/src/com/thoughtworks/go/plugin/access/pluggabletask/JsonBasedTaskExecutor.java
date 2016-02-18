@@ -18,6 +18,7 @@ package com.thoughtworks.go.plugin.access.pluggabletask;
 
 import com.thoughtworks.go.plugin.access.DefaultPluginInteractionCallback;
 import com.thoughtworks.go.plugin.access.PluginRequestHelper;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.plugin.api.response.execution.ExecutionResult;
 import com.thoughtworks.go.plugin.api.task.TaskConfig;
 import com.thoughtworks.go.plugin.api.task.TaskExecutionContext;
@@ -50,5 +51,6 @@ public class JsonBasedTaskExecutor implements TaskExecutor {
             }
         });
     }
+
 }
 

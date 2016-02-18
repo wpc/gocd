@@ -18,11 +18,12 @@ package com.thoughtworks.go.domain.builder;
 
 import java.io.File;
 
-import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.domain.RunIfConfigs;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.util.SystemUtil;
 import com.thoughtworks.go.util.command.CommandLine;
+import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import org.apache.commons.lang.StringUtils;
 
 public class CommandBuilderWithArgList extends BaseCommandBuilder {
@@ -55,7 +56,7 @@ public class CommandBuilderWithArgList extends BaseCommandBuilder {
     }
 
     @Override
-    public BuildCommand buildCommand(TaskExtension taskExtension) {
+    public BuildCommand buildCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
         String[] cmdArgs = new String[args.length + 1];
         cmdArgs[0] = this.command;
         System.arraycopy(args, 0, cmdArgs, 1, args.length);

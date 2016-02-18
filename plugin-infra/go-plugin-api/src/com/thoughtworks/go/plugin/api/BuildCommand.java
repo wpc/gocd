@@ -1,4 +1,4 @@
-package com.thoughtworks.go.agent;
+package com.thoughtworks.go.plugin.api;
 
 import java.util.Arrays;
 import java.util.List;

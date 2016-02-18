@@ -3,9 +3,21 @@ package com.thoughtworks.go.agent;
 import com.thoughtworks.go.agent.service.AgentWebsocketService;
 import com.thoughtworks.go.config.ArtifactPlan;
 import com.thoughtworks.go.domain.*;
+import com.thoughtworks.go.domain.builder.pluggableTask.PluggableTaskConsole;
+import com.thoughtworks.go.domain.builder.pluggableTask.PluggableTaskContext;
 import com.thoughtworks.go.domain.exception.ArtifactPublishingException;
 import com.thoughtworks.go.plugin.access.PluginRequestHelper;
+import com.thoughtworks.go.plugin.access.pluggabletask.JobConsoleLoggerInternal;
+import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
+import com.thoughtworks.go.plugin.api.BuildCommand;
+import com.thoughtworks.go.plugin.api.response.execution.ExecutionResult;
+import com.thoughtworks.go.plugin.api.task.Console;
+import com.thoughtworks.go.plugin.api.task.EnvironmentVariables;
+import com.thoughtworks.go.plugin.api.task.TaskConfig;
+import com.thoughtworks.go.plugin.api.task.TaskExecutionContext;
+import com.thoughtworks.go.plugin.infra.ActionWithReturn;
 import com.thoughtworks.go.plugin.infra.PluginManager;
+import com.thoughtworks.go.plugin.infra.plugininfo.GoPluginDescriptor;
 import com.thoughtworks.go.publishers.GoArtifactsManipulator;
 import com.thoughtworks.go.remote.work.ConsoleOutputTransmitter;
 import com.thoughtworks.go.remote.work.RemoteConsoleAppender;
@@ -13,6 +25,7 @@ import com.thoughtworks.go.server.service.AgentBuildingInfo;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.util.*;
 import com.thoughtworks.go.util.command.CommandLine;
+import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
 import com.thoughtworks.go.util.command.StringArgument;
 import com.thoughtworks.go.websocket.Action;
@@ -37,9 +50,10 @@ public class BuildSession {
     private ConsoleOutputTransmitter console;
     private String buildId;
     private BuildSessionGoPublisher publisher;
+    private TaskExtension taskExtension;
 
     enum BulidCommandType {
-        start, end, echo, export, compose, exec, test, generateProperty, uploadArtifact, generateTestReport, downloadFile, downloadDir, reportCompleting, reportCompleted, callExtension, reportCurrentStatus
+        start, end, echo, export, compose, exec, test, generateProperty, uploadArtifact, generateTestReport, downloadFile, downloadDir, reportCompleting, reportCompleted, callExtension, callAPIBasedTaskExtension, reportCurrentStatus
     }
 
     private Map<String, String> envs = new HashMap<>();
@@ -49,12 +63,12 @@ public class BuildSession {
     private final AgentWebsocketService websocketService;
     private PluginManager pluginManager;
 
-    public BuildSession(AgentRuntimeInfo agentRuntimeInfo, HttpService httpService, AgentWebsocketService websocketService, PluginManager pluginManager) {
+    public BuildSession(AgentRuntimeInfo agentRuntimeInfo, HttpService httpService, AgentWebsocketService websocketService, PluginManager pluginManager, TaskExtension taskExtension) {
         this.agentRuntimeInfo = agentRuntimeInfo;
         this.httpService = httpService;
         this.websocketService = websocketService;
         this.pluginManager = pluginManager;
-
+        this.taskExtension = taskExtension;
     }
 
     public boolean process(BuildCommand command) {
@@ -107,6 +121,8 @@ public class BuildSession {
                     return generateTestReport(command);
                 case callExtension:
                     return callExtension(command);
+                case callAPIBasedTaskExtension:
+                    return callAPIBasedTaskExtension(command);
                 case end:
                     return end();
                 default:
@@ -116,6 +132,40 @@ public class BuildSession {
             LOG.error("Processing error: ", e);
             return false;
         }
+    }
+
+    private boolean callAPIBasedTaskExtension(BuildCommand command) {
+        final Map<String, Object> callParams = (Map<String, Object>) command.getArgs()[0];
+        Map<String, Map<String, String>> config = (Map<String, Map<String, String>>) callParams.get("taskConfig");
+        final TaskConfig taskConfig = new TaskConfig();
+        for (String key : config.keySet()) {
+            String value = config.get(key).get("value");
+            taskConfig.add(new com.thoughtworks.go.plugin.api.config.Property(key, value, null));
+        }
+        final EnvironmentVariableContext environmentVariableContext = new EnvironmentVariableContext();
+        Map<String, String> environmentVariables = (Map<String, String>) callParams.get("environmentVariables");
+        for (String key : environmentVariables.keySet()) {
+            environmentVariableContext.setProperty(key, environmentVariables.get(key), false);
+        }
+        ExecutionResult executionResult = taskExtension.execute((String) callParams.get("pluginId"), new ActionWithReturn<com.thoughtworks.go.plugin.api.task.Task, ExecutionResult>() {
+            @Override
+            public ExecutionResult execute(com.thoughtworks.go.plugin.api.task.Task task, GoPluginDescriptor pluginDescriptor) {
+                final TaskExecutionContext taskExecutionContext = new PluggableTaskContext(
+                        null,
+                        publisher,
+                        environmentVariableContext,
+                        (String) callParams.get("workingDir"));
+                return task.executor().execute(taskConfig, taskExecutionContext);
+            }
+        });
+
+        if (!executionResult.isSuccessful()) {
+            String errorMessage = executionResult.getMessagesForDisplay();
+            LOG.error(errorMessage);
+            publisher.consumeLine(errorMessage);
+        }
+
+        return executionResult.isSuccessful();
     }
 
     private boolean callExtension(BuildCommand command) {
@@ -304,6 +354,7 @@ public class BuildSession {
     private boolean end() {
         agentRuntimeInfo.idle();
         buildPass = null;
+        JobConsoleLoggerInternal.unsetContext();
         console.stop();
         return true;
     }
@@ -319,7 +370,7 @@ public class BuildSession {
         Map<String, String> settings = (Map<String, String>) command.getArgs()[0];
         String buildLocator = settings.get("buildLocator");
         String buildLocatorForDisplay = settings.get("buildLocatorForDisplay");
-        String consoleURI = settings.get("consoleURI");
+        final String consoleURI = settings.get("consoleURI");
         String artifactUploadBaseUrl = settings.get("artifactUploadBaseUrl");
         String propertyBaseUrl = settings.get("propertyBaseUrl");
         this.buildId = settings.get("buildId");
@@ -332,6 +383,45 @@ public class BuildSession {
 
 
         this.publisher = new BuildSessionGoPublisher(console, httpService, artifactUploadBaseUrl, propertyBaseUrl, buildId);
+
+        final Console.SecureEnvVarSpecifier notSecure = new Console.SecureEnvVarSpecifier() {
+            @Override
+            public boolean isSecure(String variableName) {
+                return false;
+            }
+        };
+
+        JobConsoleLoggerInternal.setContext(new TaskExecutionContext() {
+            @Override
+            public EnvironmentVariables environment() {
+                return new EnvironmentVariables() {
+                    @Override
+                    public Map<String, String> asMap() {
+                        return BuildSession.this.envs;
+                    }
+
+                    @Override
+                    public void writeTo(Console console) {
+                        console.printEnvironment(BuildSession.this.envs, notSecure);
+                    }
+
+                    @Override
+                    public Console.SecureEnvVarSpecifier secureEnvSpecifier() {
+                        return notSecure;
+                    }
+                };
+            }
+
+            @Override
+            public Console console() {
+                return new PluggableTaskConsole(null, publisher);
+            }
+
+            @Override
+            public String workingDir() {
+                return null;
+            }
+        });
         return true;
     }
 

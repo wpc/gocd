@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.domain.builder.pluggableTask;
 
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.config.pluggabletask.PluggableTask;
 import com.thoughtworks.go.domain.BuildLogElement;
 import com.thoughtworks.go.domain.RunIfConfigs;
@@ -85,6 +86,12 @@ public class PluggableTaskBuilder extends Builder implements Serializable {
         if (!executionResult.isSuccessful()) {
             logError(publisher, executionResult.getMessagesForDisplay());
         }
+    }
+
+    @Override
+    public BuildCommand buildCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
+        TaskConfig config = buildTaskConfig(taskExtension.getTaskConfig(pluginId));
+        return taskExtension.taskBuildCommand(pluginId, config, buildTaskContext(null, null, envContext));
     }
 
     protected ExecutionResult executeTask(Task task, BuildLogElement buildLogElement,

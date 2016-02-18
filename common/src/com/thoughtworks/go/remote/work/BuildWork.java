@@ -18,7 +18,7 @@
 
 package com.thoughtworks.go.remote.work;
 
-import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.config.ArtifactPlan;
 import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
 import com.thoughtworks.go.config.RunIfConfig;
@@ -273,7 +273,7 @@ public class BuildWork implements Work {
     }
 
     @Override
-    public BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension) {
+    public BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension, TaskExtension taskExtension) {
         this.plan = assignment.getPlan();
         this.materialRevisions = assignment.materialRevisions();
         this.workingDirectory = assignment.getWorkingDirectory();
@@ -299,20 +299,20 @@ public class BuildWork implements Work {
         commands.add(new BuildCommand("export", envContext.getProperties()));
         commands.add(new BuildCommand("echo", "Job started."));
         commands.add(createPrepareCommand(scmExtension));
-        commands.add(createMainBuildCommand());
+        commands.add(createMainBuildCommand(taskExtension, envContext));
         commands.add(new BuildCommand("reportCompleted").runIf("any"));
         commands.add(new BuildCommand("end").runIf("any"));
         return new BuildCommand("compose", commands);
     }
 
 
-    private BuildCommand createMainBuildCommand() {
+    private BuildCommand createMainBuildCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
         List<BuildCommand> commands = new ArrayList<>();
 
         commands.add(new BuildCommand("echo", "Start to build"));
         commands.add(new BuildCommand("reportCurrentStatus", JobState.Building.name()));
 
-        commands.add(createBuildersCommand());
+        commands.add(createBuildersCommand(taskExtension, envContext));
 
         commands.add(new BuildCommand("reportCompleting").runIf("any"));
 
@@ -376,14 +376,12 @@ public class BuildWork implements Work {
         return result;
     }
 
-    private BuildCommand createBuildersCommand() {
+    private BuildCommand createBuildersCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
         List<BuildCommand> commands = new ArrayList<>();
         for (Builder builder : assignment.getBuilders()) {
-            commands.add(builder.buildCommand(null));
+            commands.add(builder.buildCommand(taskExtension, envContext));
         }
-        BuildCommand compose = new BuildCommand("compose");
-        compose.setSubCommands(commands.toArray(new BuildCommand[commands.size()]));
-        return compose;
+        return new BuildCommand("compose", commands);
     }
 
     // only for test

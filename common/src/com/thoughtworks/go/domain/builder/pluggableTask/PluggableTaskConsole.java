@@ -23,13 +23,14 @@ import com.thoughtworks.go.domain.BuildLogElement;
 import com.thoughtworks.go.util.command.StreamPumper;
 import com.thoughtworks.go.work.DefaultGoPublisher;
 import com.thoughtworks.go.plugin.api.task.Console;
+import com.thoughtworks.go.work.GoPublisher;
 
 public class PluggableTaskConsole implements Console {
     public static final String MASK_VALUE = "********";
     private final BuildLogElement buildLogElement;
-    private final DefaultGoPublisher publisher;
+    private final GoPublisher publisher;
 
-    public PluggableTaskConsole(BuildLogElement buildLogElement, DefaultGoPublisher publisher) {
+    public PluggableTaskConsole(BuildLogElement buildLogElement, GoPublisher publisher) {
         this.buildLogElement = buildLogElement;
         this.publisher = publisher;
     }

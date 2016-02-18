@@ -16,15 +16,18 @@
 
 package com.thoughtworks.go.plugin.access.pluggabletask;
 
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.plugin.access.common.settings.GoPluginExtension;
 import com.thoughtworks.go.plugin.access.common.settings.PluginSettingsConfiguration;
 import com.thoughtworks.go.plugin.api.response.execution.ExecutionResult;
 import com.thoughtworks.go.plugin.api.response.validation.ValidationResult;
 import com.thoughtworks.go.plugin.api.task.Task;
 import com.thoughtworks.go.plugin.api.task.TaskConfig;
+import com.thoughtworks.go.plugin.api.task.TaskExecutionContext;
 import com.thoughtworks.go.plugin.infra.Action;
 import com.thoughtworks.go.plugin.infra.ActionWithReturn;
 import com.thoughtworks.go.plugin.infra.PluginManager;
+import com.thoughtworks.go.plugin.infra.plugininfo.GoPluginDescriptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -98,4 +101,23 @@ public class TaskExtension implements TaskExtensionContract, GoPluginExtension {
     public boolean canHandlePlugin(String pluginId) {
         return pluginManager.hasReferenceFor(Task.class, pluginId) || pluginManager.isPluginOfType(JsonBasedTaskExtension.TASK_EXTENSION, pluginId);
     }
+
+    public TaskConfig getTaskConfig(String pluginId) {
+        final Task[] taskHolder = new Task[1];
+        getExtension(pluginId).doOnTask(pluginId, new Action<Task>() {
+            @Override
+            public void execute(Task task, GoPluginDescriptor pluginDescriptor) {
+                taskHolder[0] = task;
+            }
+        });
+
+        return taskHolder[0].config();
+    }
+
+
+    @Override
+    public BuildCommand taskBuildCommand(String pluginId, TaskConfig taskConfig, TaskExecutionContext taskExecutionContext) {
+        return getExtension(pluginId).taskBuildCommand(pluginId, taskConfig, taskExecutionContext);
+    }
+
 }

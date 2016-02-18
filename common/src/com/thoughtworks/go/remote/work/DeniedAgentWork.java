@@ -18,7 +18,7 @@
 
 package com.thoughtworks.go.remote.work;
 
-import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
@@ -51,7 +51,7 @@ public class DeniedAgentWork implements Work {
     }
 
     @Override
-    public BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension) {
+    public BuildCommand toBuildCommand(URLService urlService, SCMExtension scmExtension, TaskExtension taskExtension) {
         throw new RuntimeException("should never be called");
     }
 }

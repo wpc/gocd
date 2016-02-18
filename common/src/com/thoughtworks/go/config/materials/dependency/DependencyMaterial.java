@@ -16,7 +16,7 @@
 
 package com.thoughtworks.go.config.materials.dependency;
 
-import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.FetchTask;
 import com.thoughtworks.go.config.PipelineConfig;

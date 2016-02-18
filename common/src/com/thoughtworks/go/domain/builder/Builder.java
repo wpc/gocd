@@ -19,7 +19,7 @@ package com.thoughtworks.go.domain.builder;
 import java.io.Serializable;
 import static java.lang.String.format;
 
-import com.thoughtworks.go.agent.BuildCommand;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.config.RunIfConfig;
 import com.thoughtworks.go.domain.BuildLogElement;
 import com.thoughtworks.go.domain.RunIfConfigs;
@@ -27,6 +27,7 @@ import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.work.DefaultGoPublisher;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.util.command.CruiseControlException;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Logger;
 
 public abstract class Builder implements Serializable {
@@ -118,7 +119,7 @@ public abstract class Builder implements Serializable {
         throw new CruiseControlException(message);
     }
 
-    public BuildCommand buildCommand(TaskExtension taskExtension) {
-        return new BuildCommand("echo", "should exec " + this.getClass().getName());
+    public BuildCommand buildCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
+        throw new NotImplementedException();
     }
 }

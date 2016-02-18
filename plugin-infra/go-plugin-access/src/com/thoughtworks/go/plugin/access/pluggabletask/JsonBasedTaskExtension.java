@@ -20,10 +20,12 @@ import com.thoughtworks.go.plugin.access.PluginRequestHelper;
 import com.thoughtworks.go.plugin.access.common.settings.AbstractExtension;
 import com.thoughtworks.go.plugin.access.common.settings.PluginSettingsJsonMessageHandler;
 import com.thoughtworks.go.plugin.access.common.settings.PluginSettingsJsonMessageHandler1_0;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.plugin.api.response.execution.ExecutionResult;
 import com.thoughtworks.go.plugin.api.response.validation.ValidationResult;
 import com.thoughtworks.go.plugin.api.task.Task;
 import com.thoughtworks.go.plugin.api.task.TaskConfig;
+import com.thoughtworks.go.plugin.api.task.TaskExecutionContext;
 import com.thoughtworks.go.plugin.infra.Action;
 import com.thoughtworks.go.plugin.infra.ActionWithReturn;
 import com.thoughtworks.go.plugin.infra.PluginManager;
@@ -67,6 +69,24 @@ class JsonBasedTaskExtension extends AbstractExtension implements TaskExtensionC
         JsonBasedPluggableTask task = new JsonBasedPluggableTask(pluginId, pluginRequestHelper, handlerHashMap);
         return task.validate(taskConfig);
     }
+
+    @Override
+    public BuildCommand taskBuildCommand(String pluginId, TaskConfig taskConfig, TaskExecutionContext taskExecutionContext) {
+
+        String resolvedExtensionVersion = pluginManager.resolveExtensionVersion(pluginId, supportedVersions);
+
+        String requestBody =  handlerHashMap.get(resolvedExtensionVersion).getTaskExecutionBody(taskConfig, taskExecutionContext);
+
+        HashMap<String, Object> call = new HashMap<>();
+        call.put("name", TASK_EXTENSION);
+        call.put("pluginId", pluginId);
+        call.put("requestName", EXECUTION_REQUEST);
+        call.put("extensionVersion", resolvedExtensionVersion);
+        call.put("requestBody", requestBody);
+        call.put("requestParams", null);
+        return new BuildCommand("callExtension", call);
+    }
+
 
     Map<String, PluginSettingsJsonMessageHandler> getPluginSettingsMessageHandlerMap() {
         return pluginSettingsMessageHandlerMap;

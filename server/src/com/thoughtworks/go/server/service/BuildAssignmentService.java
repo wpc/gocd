@@ -21,6 +21,7 @@ import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.builder.Builder;
 import com.thoughtworks.go.listener.PipelineConfigChangedListener;
+import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
 import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
@@ -70,12 +71,13 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
     private AgentRemoteHandler agentRemoteHandler;
     private URLService urlService;
     private SCMExtension scmExtension;
+    private TaskExtension taskExtension;
 
     @Autowired
     public BuildAssignmentService(GoConfigService goConfigService, JobInstanceService jobInstanceService, ScheduleService scheduleService,
                                   AgentService agentService, EnvironmentConfigService environmentConfigService,
                                   TransactionTemplate transactionTemplate, ScheduledPipelineLoader scheduledPipelineLoader, PipelineService pipelineService, BuilderFactory builderFactory,
-                                  AgentRemoteHandler agentRemoteHandler, URLService urlService, SCMExtension scmExtension) {
+                                  AgentRemoteHandler agentRemoteHandler, URLService urlService, SCMExtension scmExtension, TaskExtension taskExtension) {
         this.goConfigService = goConfigService;
         this.jobInstanceService = jobInstanceService;
         this.scheduleService = scheduleService;
@@ -88,6 +90,7 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
         this.agentRemoteHandler = agentRemoteHandler;
         this.urlService = urlService;
         this.scmExtension = scmExtension;
+        this.taskExtension = taskExtension;
     }
 
     public void initialize() {
@@ -165,7 +168,7 @@ public class BuildAssignmentService implements PipelineConfigChangedListener {
             }
             Work work = assignWorkToAgent(agentInstance);
             if (work != NO_WORK) {
-                agent.send(new Message(Action.cmd, work.toBuildCommand(urlService, scmExtension)));
+                agent.send(new Message(Action.cmd, work.toBuildCommand(urlService, scmExtension, taskExtension)));
             }
         }
         if (LOGGER.isDebugEnabled()) {
