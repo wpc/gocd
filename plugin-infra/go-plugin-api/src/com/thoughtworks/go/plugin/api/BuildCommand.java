@@ -49,12 +49,12 @@ public class BuildCommand {
     }
 
     public BuildCommand(String name, String... args) {
-        this.name = name;
+        this(name);
         this.args = args;
     }
 
     public BuildCommand(String name, Map... args) {
-        this.name = name;
+        this(name);
         this.args = args;
     }
 
@@ -72,6 +72,26 @@ public class BuildCommand {
             result[i] = args[i].toString();
         }
         return result;
+    }
+
+    public String dump(int indent) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < indent; i++) {
+            sb.append("  ");
+        }
+        sb.append(name);
+
+        for (Object arg : args) {
+            sb.append(" ").append('\"').append(arg.toString()).append('\"');
+        }
+
+        if(!"passed".equals(runIfConfig)) {
+            sb.append(" ").append("(runIf:").append(runIfConfig).append(")");
+        }
+        for (BuildCommand subCommand : subCommands) {
+            sb.append("\n").append(subCommand.dump(indent + 1));
+        }
+        return sb.toString();
     }
 
     @Override

@@ -304,7 +304,9 @@ public class AgentController {
             case cmd:
                 agentRuntimeInfo.idle();
                 try {
-                    buildSession.process((BuildCommand) message.getData());
+                    BuildCommand command = (BuildCommand) message.getData();
+                    LOG.debug("\n" + command.dump(0));
+                    buildSession.process(command);
                 } finally {
                     agentRuntimeInfo.idle();
                     updateServerAgentRuntimeInfo();
