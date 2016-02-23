@@ -229,14 +229,11 @@ public class AgentRegistrationController {
 
             public void render(Map model, HttpServletRequest request, HttpServletResponse response) throws IOException {
                 ServletOutputStream servletOutputStream = null;
-                ObjectOutputStream objectOutputStream = null;
                 try {
                     servletOutputStream = response.getOutputStream();
-                    objectOutputStream = new ObjectOutputStream(servletOutputStream);
-                    objectOutputStream.writeObject(anotherCopy);
+                    servletOutputStream.print(anotherCopy.toJson());
                 } finally {
                     IOUtils.closeQuietly(servletOutputStream);
-                    IOUtils.closeQuietly(objectOutputStream);
                 }
             }
         });

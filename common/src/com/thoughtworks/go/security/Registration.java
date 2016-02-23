@@ -16,15 +16,48 @@
 
 package com.thoughtworks.go.security;
 
+import com.google.gson.Gson;
+import com.thoughtworks.xstream.core.util.Base64Encoder;
+import sun.misc.BASE64Decoder;
+import sun.security.x509.X509CertImpl;
+
+import java.io.IOException;
 import java.io.Serializable;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.*;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Date;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.*;
+
+import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 
 public class Registration implements Serializable {
+    private static Gson gson = new Gson();
+
+    public static Registration fromJson(String json) {
+        Map map = gson.fromJson(json, Map.class);
+        BASE64Decoder decoder = new BASE64Decoder();
+        List<Certificate> chain = new ArrayList<>();
+        try {
+            Map<String, String> key = (Map<String, String>) map.get("privateKey");
+            KeyFactory kf = KeyFactory.getInstance(key.get("algorithm"));
+            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoder.decodeBuffer(key.get("data")));
+            PrivateKey privateKey = kf.generatePrivate(spec);
+            List stringChain = (List) map.get("chain");
+            for (Object obj : stringChain) {
+                Map<String, String> cert = (Map<String, String>) obj;
+                Certificate c = new X509CertImpl(decoder.decodeBuffer(cert.get("data")));
+                chain.add(c);
+            }
+            return new Registration(privateKey, chain.toArray(new Certificate[chain.size()]));
+        } catch (IOException | NoSuchAlgorithmException | CertificateException | InvalidKeySpecException e) {
+            throw bomb(e);
+        }
+    }
+
     private final PrivateKey privateKey;
     private final Certificate[] chain;
 
@@ -76,4 +109,38 @@ public class Registration implements Serializable {
     public KeyStore.PrivateKeyEntry asKeyStoreEntry() {
         return new KeyStore.PrivateKeyEntry(privateKey, chain);
     }
+
+    public String toJson() {
+        Map<String, Object> ret = new HashMap<>();
+        ret.put("privateKey", serialize(privateKey));
+        List<Map<String, String>> cs = new ArrayList<>();
+        for (Certificate c : chain) {
+            cs.add(serialize(c));
+        }
+        ret.put("chain", cs.toArray());
+        return gson.toJson(ret);
+    }
+
+    private Map<String, String> serialize(Certificate certificate) {
+        Base64Encoder encoder = new Base64Encoder();
+        Map<String, String> ret = new HashMap<>();
+        try {
+            ret.put("data", encoder.encode(certificate.getEncoded()));
+        } catch (CertificateEncodingException e) {
+            bomb(e);
+        }
+        ret.put("type", "X509");
+        ret.put("format", "ASN.1 DER");
+        return ret;
+    }
+
+    private Map<String, String> serialize(PrivateKey privateKey) {
+        Base64Encoder encoder = new Base64Encoder();
+        Map<String, String> ret = new HashMap<>();
+        ret.put("data", encoder.encode(privateKey.getEncoded()));
+        ret.put("format", privateKey.getFormat());
+        ret.put("algorithm", privateKey.getAlgorithm());
+        return ret;
+    }
+
 }
