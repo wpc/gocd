@@ -30,10 +30,20 @@ public class MapUtil {
         ArrayList<V> result = new ArrayList<>();
         Collection<V> values = map.values();
         for (V value : values) {
-            if (predicate.apply(value)){
+            if (predicate.apply(value)) {
                 result.add(value);
             }
         }
+        return result;
+    }
+
+    public static <T, V, O> Collection<O> collect(Map<T, V> input, ListUtil.Transformer<O, Map.Entry<T, V>> transformer) {
+        ArrayList<O> result = new ArrayList<>();
+
+        for (Map.Entry<T, V> entry : input.entrySet()) {
+            result.add(transformer.apply(entry));
+        }
+
         return result;
     }
 }

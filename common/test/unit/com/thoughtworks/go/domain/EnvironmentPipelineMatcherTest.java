@@ -21,6 +21,7 @@ import java.util.Arrays;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.EnvironmentPipelineConfig;
 import com.thoughtworks.go.config.EnvironmentPipelinesConfig;
+import com.thoughtworks.go.config.EnvironmentVariablesConfig;
 import org.junit.Test;
 import static org.junit.Assert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -42,7 +43,6 @@ public class EnvironmentPipelineMatcherTest {
     }
 
     private DefaultJobPlan jobPlan(String pipelineName) {
-        return new DefaultJobPlan(null, null, null, 0,
-                new JobIdentifier(pipelineName, 0, "label", "stage", "1", "blahBuildName", 0L));
+        return new DefaultJobPlan(null, null, null, 0, new JobIdentifier(pipelineName, 0, "label", "stage", "1", "blahBuildName", 0L), null, new EnvironmentVariablesConfig(), new EnvironmentVariablesConfig(), null);
     }
 }

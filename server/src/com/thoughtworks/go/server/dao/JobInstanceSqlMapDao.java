@@ -61,6 +61,7 @@ public class JobInstanceSqlMapDao extends SqlMapClientDaoSupport implements JobI
     private GoCache goCache;
     private TransactionTemplate transactionTemplate;
     private EnvironmentVariableDao environmentVariableDao;
+    private JobAgentMetadataDao jobAgentMetadataDao;
     private Cloner cloner = new Cloner();
     private ResourceRepository resourceRepository;
     private ArtifactPlanRepository artifactPlanRepository;
@@ -69,7 +70,8 @@ public class JobInstanceSqlMapDao extends SqlMapClientDaoSupport implements JobI
     @Autowired
     public JobInstanceSqlMapDao(EnvironmentVariableDao environmentVariableDao, GoCache goCache, TransactionTemplate transactionTemplate, SqlMapClient sqlMapClient, Cache cache,
                                 TransactionSynchronizationManager transactionSynchronizationManager, SystemEnvironment systemEnvironment, Database database,
-                                ResourceRepository resourceRepository, ArtifactPlanRepository artifactPlanRepository, ArtifactPropertiesGeneratorRepository artifactPropertiesGeneratorRepository) {
+                                ResourceRepository resourceRepository, ArtifactPlanRepository artifactPlanRepository, ArtifactPropertiesGeneratorRepository artifactPropertiesGeneratorRepository,
+                                JobAgentMetadataDao jobAgentMetadataDao) {
         super(goCache, sqlMapClient, systemEnvironment, database);
         this.environmentVariableDao = environmentVariableDao;
         this.goCache = goCache;
@@ -79,6 +81,7 @@ public class JobInstanceSqlMapDao extends SqlMapClientDaoSupport implements JobI
         this.resourceRepository = resourceRepository;
         this.artifactPlanRepository = artifactPlanRepository;
         this.artifactPropertiesGeneratorRepository = artifactPropertiesGeneratorRepository;
+        this.jobAgentMetadataDao = jobAgentMetadataDao;
     }
 
     public JobInstance buildByIdWithTransitions(long buildInstanceId) {
@@ -193,6 +196,10 @@ public class JobInstanceSqlMapDao extends SqlMapClientDaoSupport implements JobI
             artifactPlanRepository.saveCopyOf(jobId, artifactPlan);
         }
         environmentVariableDao.save(jobId, EnvironmentVariableSqlMapDao.EnvironmentVariableType.Job, plan.getVariables());
+
+        if (plan.getJobAgentConfig() != null){
+            jobAgentMetadataDao.save(new JobAgentMetadata(jobId, plan.getJobAgentConfig()));
+        }
     }
 
     public JobPlan loadPlan(long jobId) {
@@ -207,6 +214,10 @@ public class JobInstanceSqlMapDao extends SqlMapClientDaoSupport implements JobI
         plan.setResources(resourceRepository.findByBuildId(plan.getJobId()));
         plan.setVariables(environmentVariableDao.load(plan.getJobId(), EnvironmentVariableSqlMapDao.EnvironmentVariableType.Job));
         plan.setTriggerVariables(environmentVariableDao.load(plan.getPipelineId(), EnvironmentVariableSqlMapDao.EnvironmentVariableType.Trigger));
+        JobAgentMetadata jobAgentMetadata = jobAgentMetadataDao.load(plan.getJobId());
+        if (jobAgentMetadata != null){
+            plan.setJobAgentConfig(jobAgentMetadata.jobAgentConfig());
+        }
     }
 
     public JobIdentifier findOriginalJobIdentifier(StageIdentifier stageIdentifier, String jobName) {

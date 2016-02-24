@@ -18,6 +18,7 @@ package com.thoughtworks.go.server.dao;
 
 import com.thoughtworks.go.config.ArtifactPlans;
 import com.thoughtworks.go.config.ArtifactPropertiesGenerators;
+import com.thoughtworks.go.config.EnvironmentVariablesConfig;
 import com.thoughtworks.go.config.Resources;
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.helper.JobInstanceMother;
@@ -65,7 +66,7 @@ public class JobInstanceSqlMapDaoCachingTest {
     @Test
     public void buildByIdWithTransitions_shouldCacheWhenQueriedFor() {
         jobInstanceDao.setSqlMapClientTemplate(mockTemplate);
-        
+
         JobInstance job = JobInstanceMother.assigned("job");
         job.setId(1L);
         when(mockTemplate.queryForObject("buildByIdWithTransitions", 1L)).thenReturn(job);
@@ -90,7 +91,7 @@ public class JobInstanceSqlMapDaoCachingTest {
         assertThat(actual, is(job));
         assertThat(actual == job, is(false));
 
-        jobInstanceDao.updateStateAndResult(job); //Must clear cahced job instance 
+        jobInstanceDao.updateStateAndResult(job); //Must clear cahced job instance
 
         jobInstanceDao.buildByIdWithTransitions(1L);
         verify(mockTemplate, times(2)).queryForObject("buildByIdWithTransitions", 1L);
@@ -198,7 +199,7 @@ public class JobInstanceSqlMapDaoCachingTest {
         jobInstanceDao.activeJobs();//cache it first
 
         jobInstanceDao.updateStateAndResult(instance(1L));//should remove from cache
-        
+
         List<ActiveJob> activeJobs = jobInstanceDao.activeJobs();
 
         assertThat(expectedJobs, is(activeJobs));
@@ -286,6 +287,6 @@ public class JobInstanceSqlMapDaoCachingTest {
     }
 
     private DefaultJobPlan jobPlan(long id) {
-        return new DefaultJobPlan(new Resources(), new ArtifactPlans(), new ArtifactPropertiesGenerators(), id, null);
+        return new DefaultJobPlan(new Resources(), new ArtifactPlans(), new ArtifactPropertiesGenerators(), id, null, null, new EnvironmentVariablesConfig(), new EnvironmentVariablesConfig(), null);
     }
 }

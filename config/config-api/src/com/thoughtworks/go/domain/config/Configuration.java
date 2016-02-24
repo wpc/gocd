@@ -16,17 +16,13 @@
 
 package com.thoughtworks.go.domain.config;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.thoughtworks.go.config.ConfigCollection;
 import com.thoughtworks.go.config.ConfigTag;
 import com.thoughtworks.go.domain.BaseCollection;
 import com.thoughtworks.go.util.ListUtil;
 import com.thoughtworks.go.util.StringUtil;
+
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -127,8 +123,8 @@ public class Configuration extends BaseCollection<ConfigurationProperty> {
         }
     }
 
-    public Map<String, Object> getConfigurationAsMap(boolean addSecureFields) {
-        Map<String, Object> configurationMap = new HashMap<String, Object>();
+    public Map<String, String> getConfigurationAsMap(boolean addSecureFields) {
+        Map<String, String> configurationMap = new HashMap<>();
         for (ConfigurationProperty currentConfiguration : this) {
             if (addSecureFields || !currentConfiguration.isSecure()) {
                 configurationMap.put(currentConfiguration.getConfigKeyName(), currentConfiguration.getValue());
