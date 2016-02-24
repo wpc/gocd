@@ -32,16 +32,6 @@ public class RegistrationTest {
     private static String authorityKeystorePath = "tempAuthorityKeystore";
 
     @Test
-    public void testJsonFormat() {
-        String json = createRegistration().toJson();
-        Map map = new Gson().fromJson(json, Map.class);
-        assertThat(map.get("privateKey"), is(instanceOf(Map.class)));
-        Map<String, String> key = (Map<String, String>) map.get("privateKey");
-        assertThat(key.get("algorithm"), is("RSA"));
-        assertThat(key.get("format"), is("PKCS#8"));
-    }
-
-    @Test
     public void decodeFromJson() {
         String json = createRegistration().toJson();
         Registration reg = Registration.fromJson(json);

@@ -17,12 +17,16 @@
 package com.thoughtworks.go.security;
 
 import com.google.gson.Gson;
-import com.thoughtworks.xstream.core.util.Base64Encoder;
-import sun.misc.BASE64Decoder;
+import org.apache.commons.io.IOUtils;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
+import org.bouncycastle.util.io.pem.PemWriter;
 import sun.security.x509.X509CertImpl;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -39,18 +43,20 @@ public class Registration implements Serializable {
 
     public static Registration fromJson(String json) {
         Map map = gson.fromJson(json, Map.class);
-        BASE64Decoder decoder = new BASE64Decoder();
         List<Certificate> chain = new ArrayList<>();
         try {
-            Map<String, String> key = (Map<String, String>) map.get("privateKey");
-            KeyFactory kf = KeyFactory.getInstance(key.get("algorithm"));
-            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoder.decodeBuffer(key.get("data")));
+            PemReader reader = new PemReader(new StringReader((String) map.get("agentPrivateKey")));
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(reader.readPemObject().getContent());
             PrivateKey privateKey = kf.generatePrivate(spec);
-            List stringChain = (List) map.get("chain");
-            for (Object obj : stringChain) {
-                Map<String, String> cert = (Map<String, String>) obj;
-                Certificate c = new X509CertImpl(decoder.decodeBuffer(cert.get("data")));
-                chain.add(c);
+            String agentCertificate = (String) map.get("agentCertificate");
+            PemReader certReader = new PemReader(new StringReader(agentCertificate));
+            while (true) {
+                PemObject obj = certReader.readPemObject();
+                if (obj == null) {
+                    break;
+                }
+                chain.add(new X509CertImpl(obj.getContent()));
             }
             return new Registration(privateKey, chain.toArray(new Certificate[chain.size()]));
         } catch (IOException | NoSuchAlgorithmException | CertificateException | InvalidKeySpecException e) {
@@ -112,35 +118,32 @@ public class Registration implements Serializable {
 
     public String toJson() {
         Map<String, Object> ret = new HashMap<>();
-        ret.put("privateKey", serialize(privateKey));
-        List<Map<String, String>> cs = new ArrayList<>();
+        ret.put("agentPrivateKey", serialize("RSA PRIVATE KEY", privateKey.getEncoded()));
+        StringBuilder builder = new StringBuilder();
         for (Certificate c : chain) {
-            cs.add(serialize(c));
+            try {
+                builder.append(serialize("CERTIFICATE", c.getEncoded()));
+                builder.append('\n');
+            } catch (CertificateEncodingException e) {
+                throw bomb(e);
+            }
         }
-        ret.put("chain", cs.toArray());
+        ret.put("agentCertificate", builder.toString());
         return gson.toJson(ret);
     }
 
-    private Map<String, String> serialize(Certificate certificate) {
-        Base64Encoder encoder = new Base64Encoder();
-        Map<String, String> ret = new HashMap<>();
+    private String serialize(String type, byte[] data) {
+        PemObject obj = new PemObject(type, data);
+        StringWriter out = new StringWriter();
+        PemWriter writer = new PemWriter(out);
         try {
-            ret.put("data", encoder.encode(certificate.getEncoded()));
-        } catch (CertificateEncodingException e) {
-            bomb(e);
+            writer.writeObject(obj);
+        } catch (IOException e) {
+            throw bomb(e);
+        } finally {
+            IOUtils.closeQuietly(writer);
         }
-        ret.put("type", "X509");
-        ret.put("format", "ASN.1 DER");
-        return ret;
-    }
-
-    private Map<String, String> serialize(PrivateKey privateKey) {
-        Base64Encoder encoder = new Base64Encoder();
-        Map<String, String> ret = new HashMap<>();
-        ret.put("data", encoder.encode(privateKey.getEncoded()));
-        ret.put("format", privateKey.getFormat());
-        ret.put("algorithm", privateKey.getAlgorithm());
-        return ret;
+        return out.toString();
     }
 
 }
