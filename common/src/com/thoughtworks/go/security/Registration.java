@@ -18,6 +18,9 @@ package com.thoughtworks.go.security;
 
 import com.google.gson.Gson;
 import org.apache.commons.io.IOUtils;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 import org.bouncycastle.util.io.pem.PemWriter;
@@ -118,12 +121,11 @@ public class Registration implements Serializable {
 
     public String toJson() {
         Map<String, Object> ret = new HashMap<>();
-        ret.put("agentPrivateKey", serialize("ENCRYPTED PRIVATE KEY", privateKey.getEncoded()));
+        ret.put("agentPrivateKey", serialize("RSA PRIVATE KEY", privateKey.getEncoded()));
         StringBuilder builder = new StringBuilder();
         for (Certificate c : chain) {
             try {
                 builder.append(serialize("CERTIFICATE", c.getEncoded()));
-                builder.append('\n');
             } catch (CertificateEncodingException e) {
                 throw bomb(e);
             }
