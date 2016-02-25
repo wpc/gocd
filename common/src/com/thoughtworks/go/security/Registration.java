@@ -118,7 +118,7 @@ public class Registration implements Serializable {
 
     public String toJson() {
         Map<String, Object> ret = new HashMap<>();
-        ret.put("agentPrivateKey", serialize("RSA PRIVATE KEY", privateKey.getEncoded()));
+        ret.put("agentPrivateKey", serialize("ENCRYPTED PRIVATE KEY", privateKey.getEncoded()));
         StringBuilder builder = new StringBuilder();
         for (Certificate c : chain) {
             try {
