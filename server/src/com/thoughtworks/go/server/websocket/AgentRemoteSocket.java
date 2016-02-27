@@ -42,6 +42,10 @@ public class AgentRemoteSocket implements Agent {
     }
 
     @OnWebSocketMessage
+    public void onMessage(String text) {
+        LOGGER.debug("{} message: {}", sessionName(), text);
+    }
+    @OnWebSocketMessage
     public void onMessage(InputStream input) {
         Message msg = Message.decode(input);
         LOGGER.debug("{} message: {}", sessionName(), msg);

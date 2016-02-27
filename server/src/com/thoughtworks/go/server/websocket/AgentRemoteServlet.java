@@ -37,7 +37,7 @@ public class AgentRemoteServlet extends WebSocketServlet {
     @Override
     public void configure(WebSocketServletFactory factory) {
         AgentRemoteSocketCreator bean = wac.getBean(AgentRemoteSocketCreator.class);
-        bean.addExtensionConfig(ExtensionConfig.parse("fragment;maxLength=" + factory.getPolicy().getMaxBinaryMessageBufferSize()));
+        //bean.addExtensionConfig(ExtensionConfig.parse("fragment;maxLength=" + factory.getPolicy().getMaxBinaryMessageBufferSize()));
         factory.setCreator(bean);
     }
 }
