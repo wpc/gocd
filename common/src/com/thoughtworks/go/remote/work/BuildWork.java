@@ -301,6 +301,7 @@ public class BuildWork implements Work {
         commands.add(createPrepareCommand(scmExtension));
         commands.add(createMainBuildCommand(taskExtension, envContext));
         commands.add(new BuildCommand("reportCompleted").runIf("any"));
+        commands.add(new BuildCommand("echo", "Job completed " + plan.getIdentifier().buildLocatorForDisplay()).runIf("any"));
         commands.add(new BuildCommand("end").runIf("any"));
         return new BuildCommand("compose", commands);
     }
