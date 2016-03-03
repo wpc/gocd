@@ -380,6 +380,10 @@ public class BuildWork implements Work {
     private BuildCommand createBuildersCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
         List<BuildCommand> commands = new ArrayList<>();
         for (Builder builder : assignment.getBuilders()) {
+            commands.add(new BuildCommand("echo", "Current job status: passed"));
+            commands.add(new BuildCommand("echo", "Current job status: failed").runIf("failed"));
+            commands.add(new BuildCommand("echo", "Start to execute task: " + builder.getDescription()));
+
             commands.add(builder.buildCommand(taskExtension, envContext));
         }
         return new BuildCommand("compose", commands);
