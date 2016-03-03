@@ -16,6 +16,8 @@
 
 package com.thoughtworks.go.websocket;
 
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 
 import java.io.*;
@@ -31,11 +33,10 @@ public class Message implements Serializable {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try {
             GZIPOutputStream zip = new GZIPOutputStream(bytes);
-            ObjectOutputStream output = new ObjectOutputStream(zip);
             try {
-                output.writeObject(msg);
+                zip.write(JsonMessage.encode(msg).getBytes());
             } finally {
-                output.close();
+                zip.close();
             }
         } catch (IOException e) {
             throw bomb(e);
@@ -45,11 +46,11 @@ public class Message implements Serializable {
 
     public static Message decode(InputStream input) {
         try {
-            ObjectInputStream stream = new ObjectInputStream(new GZIPInputStream(input));
+            GZIPInputStream zip = new GZIPInputStream(input);
             try {
-                return (Message) stream.readObject();
-            } finally {
-                stream.close();
+                return JsonMessage.decode(new String(IOUtils.toByteArray(zip), Charsets.UTF_8));
+            }finally {
+                zip.close();
             }
         } catch (Exception e) {
             throw bomb(e);
