@@ -371,7 +371,7 @@ public class BuildAssignmentServiceTest {
         configHelper.removePipeline(fixture.pipelineName, config);
         when(mockGoConfigService.getCurrentConfig()).thenReturn(config);
 
-        buildAssignmentService = new BuildAssignmentService(mockGoConfigService, jobInstanceService, scheduleService, agentService, environmentConfigService, timeProvider,
+        buildAssignmentService = new BuildAssignmentService(mockGoConfigService, jobInstanceService, scheduleService, agentService, environmentConfigService,
                 transactionTemplate, scheduledPipelineLoader, pipelineService, builderFactory, agentRemoteHandler, null, null, null);
 
         buildAssignmentService.onTimer();
