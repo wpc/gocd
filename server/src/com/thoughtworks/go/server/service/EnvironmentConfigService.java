@@ -16,21 +16,10 @@
 
 package com.thoughtworks.go.server.service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import com.rits.cloning.Cloner;
 import com.thoughtworks.go.config.*;
-import com.thoughtworks.go.config.ConfigSaveState;
 import com.thoughtworks.go.config.exceptions.NoSuchEnvironmentException;
-import com.thoughtworks.go.domain.AgentInstance;
-import com.thoughtworks.go.domain.ConfigElementForEdit;
-import com.thoughtworks.go.domain.EnvironmentPipelineMatcher;
-import com.thoughtworks.go.domain.EnvironmentPipelineMatchers;
-import com.thoughtworks.go.domain.JobPlan;
+import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.i18n.Localizable;
 import com.thoughtworks.go.i18n.LocalizedMessage;
 import com.thoughtworks.go.listener.ConfigChangedListener;
@@ -43,6 +32,8 @@ import com.thoughtworks.go.server.service.result.LocalizedOperationResult;
 import com.thoughtworks.go.serverhealth.HealthStateType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.*;
 
 /**
  * @understands grouping of agents and pipelines within an environment
@@ -85,9 +76,9 @@ public class EnvironmentConfigService implements ConfigChangedListener {
         return plans;
     }
 
-    public String envForJob(String jobPipelineName) {
+    public String envForPipeline(String pipelineName) {
         for (EnvironmentPipelineMatcher matcher : matchers) {
-            if (matcher.hasPipeline(jobPipelineName)) {
+            if (matcher.hasPipeline(pipelineName)) {
                 return CaseInsensitiveString.str(matcher.name());
             }
         }

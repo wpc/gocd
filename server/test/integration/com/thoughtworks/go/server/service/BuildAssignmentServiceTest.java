@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -113,6 +113,7 @@ public class BuildAssignmentServiceTest {
     @Autowired private BuilderFactory builderFactory;
     @Autowired private InstanceFactory instanceFactory;
     @Autowired private AgentRemoteHandler agentRemoteHandler;
+    @Autowired private ElasticAgentPluginService elasticAgentPluginService;
 
     private PipelineConfig evolveConfig;
     private static final String STAGE_NAME = "dev";
@@ -125,6 +126,7 @@ public class BuildAssignmentServiceTest {
     private String md5 = "md5-test";
     private Username loserUser = new Username(new CaseInsensitiveString("loser"));
     private AgentStub agent;
+
 
     @BeforeClass
     public static void setupRepos() throws IOException {
@@ -329,7 +331,7 @@ public class BuildAssignmentServiceTest {
         };
 
         final BuildAssignmentService buildAssignmentServiceUnderTest = new BuildAssignmentService(goConfigService, mockJobInstanceService, scheduleService,
-                agentService, environmentConfigService, transactionTemplate, scheduledPipelineLoader, pipelineService, builderFactory, agentRemoteHandler, null, null, null);
+                agentService, environmentConfigService, transactionTemplate, scheduledPipelineLoader, pipelineService, builderFactory, agentRemoteHandler, null, null, null, elasticAgentPluginService);
 
         final Throwable[] fromThread = new Throwable[1];
         buildAssignmentServiceUnderTest.onTimer();
@@ -372,7 +374,7 @@ public class BuildAssignmentServiceTest {
         when(mockGoConfigService.getCurrentConfig()).thenReturn(config);
 
         buildAssignmentService = new BuildAssignmentService(mockGoConfigService, jobInstanceService, scheduleService, agentService, environmentConfigService,
-                transactionTemplate, scheduledPipelineLoader, pipelineService, builderFactory, agentRemoteHandler, null, null, null);
+                transactionTemplate, scheduledPipelineLoader, pipelineService, builderFactory, agentRemoteHandler, null, null, null, elasticAgentPluginService);
 
         buildAssignmentService.onTimer();
 

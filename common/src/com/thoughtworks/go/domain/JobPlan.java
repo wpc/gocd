@@ -16,16 +16,13 @@
 
 package com.thoughtworks.go.domain;
 
+import com.thoughtworks.go.config.*;
+import com.thoughtworks.go.util.command.EnvironmentVariableContext;
+import com.thoughtworks.go.work.DefaultGoPublisher;
+
 import java.io.File;
 import java.io.Serializable;
 import java.util.List;
-
-import com.thoughtworks.go.config.ArtifactPlan;
-import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
-import com.thoughtworks.go.config.EnvironmentVariablesConfig;
-import com.thoughtworks.go.config.Resource;
-import com.thoughtworks.go.work.DefaultGoPublisher;
-import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 
 /**
  * @understands how to perform a job. This is the persistent version of the JobConfig
@@ -71,4 +68,6 @@ public interface JobPlan extends Serializable {
     void setCleanWorkingDir(boolean cleanWorkingDir);
 
     boolean shouldCleanWorkingDir();
+
+    JobAgentConfig getJobAgentConfig();
 }

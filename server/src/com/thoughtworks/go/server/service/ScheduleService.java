@@ -1,47 +1,23 @@
-/*************************GO-LICENSE-START*********************************
- * Copyright 2014 ThoughtWorks, Inc.
+/*
+ * Copyright 2016 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *************************GO-LICENSE-END***********************************/
+ */
 
 package com.thoughtworks.go.server.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map.Entry;
-
-import com.thoughtworks.go.config.Agents;
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.PipelineConfig;
-import com.thoughtworks.go.config.PipelineNotFoundException;
-import com.thoughtworks.go.config.StageConfig;
-import com.thoughtworks.go.config.StageNotFoundException;
-import com.thoughtworks.go.domain.AgentInstance;
-import com.thoughtworks.go.domain.AgentStatus;
-import com.thoughtworks.go.domain.CannotRerunJobException;
-import com.thoughtworks.go.domain.CannotScheduleException;
-import com.thoughtworks.go.domain.DefaultSchedulingContext;
-import com.thoughtworks.go.domain.JobIdentifier;
-import com.thoughtworks.go.domain.JobInstance;
-import com.thoughtworks.go.domain.JobInstances;
-import com.thoughtworks.go.domain.JobPlan;
-import com.thoughtworks.go.domain.JobResult;
-import com.thoughtworks.go.domain.JobState;
-import com.thoughtworks.go.domain.Pipeline;
-import com.thoughtworks.go.domain.PipelineIdentifier;
-import com.thoughtworks.go.domain.SchedulingContext;
-import com.thoughtworks.go.domain.Stage;
-import com.thoughtworks.go.domain.StageIdentifier;
+import com.thoughtworks.go.config.*;
+import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.activity.AgentAssignment;
 import com.thoughtworks.go.domain.buildcause.BuildCause;
 import com.thoughtworks.go.i18n.LocalizedMessage;
@@ -77,6 +53,10 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionSynchronizationAdapter;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
+
 import static com.thoughtworks.go.util.GoConstants.DEFAULT_APPROVED_BY;
 
 @Service
@@ -109,6 +89,7 @@ public class ScheduleService {
     private PipelinePauseService pipelinePauseService;
     private InstanceFactory instanceFactory;
     private SchedulingPerformanceLogger schedulingPerformanceLogger;
+    private ElasticAgentPluginService elasticAgentPluginService;
 
     protected ScheduleService() {
     }
@@ -137,7 +118,9 @@ public class ScheduleService {
                            ConsoleActivityMonitor consoleActivityMonitor,
                            PipelinePauseService pipelinePauseService,
                            InstanceFactory instanceFactory,
-                           SchedulingPerformanceLogger schedulingPerformanceLogger) {
+                           SchedulingPerformanceLogger schedulingPerformanceLogger,
+                           ElasticAgentPluginService elasticAgentPluginService
+    ) {
         this.goConfigService = goConfigService;
         this.pipelineService = pipelineService;
         this.stageService = stageService;
@@ -162,6 +145,7 @@ public class ScheduleService {
         this.pipelinePauseService = pipelinePauseService;
         this.instanceFactory = instanceFactory;
         this.schedulingPerformanceLogger = schedulingPerformanceLogger;
+        this.elasticAgentPluginService = elasticAgentPluginService;
     }
 
     //Note: This is called from a Spring timer
@@ -469,13 +453,15 @@ public class ScheduleService {
 
             LOGGER.info("[Stage Cancellation] Cancelling stage " + stage.getIdentifier());
             transactionTemplate.executeWithExceptionHandling(new com.thoughtworks.go.server.transaction.TransactionCallbackWithoutResult() {
-                @Override public void doInTransactionWithoutResult(TransactionStatus status) throws Exception {
+                @Override
+                public void doInTransactionWithoutResult(TransactionStatus status) throws Exception {
                     stageService.cancelStage(stage);
                 }
             });
 
             transactionTemplate.executeWithExceptionHandling(new com.thoughtworks.go.server.transaction.TransactionCallbackWithoutResult() {
-                @Override public void doInTransactionWithoutResult(TransactionStatus status) throws Exception {
+                @Override
+                public void doInTransactionWithoutResult(TransactionStatus status) throws Exception {
                     automaticallyTriggerRelevantStagesFollowingCompletionOf(stage);
                 }
             });
@@ -517,7 +503,8 @@ public class ScheduleService {
                         jobInstanceService.updateStateAndResult(job);
 
                         synchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-                            @Override public void afterCommit() {
+                            @Override
+                            public void afterCommit() {
                                 stageDao.clearCachedAllStages(jobIdentifier.getPipelineName(), jobIdentifier.getPipelineCounter(), jobIdentifier.getStageName());
                             }
                         });
@@ -532,7 +519,8 @@ public class ScheduleService {
                 // this has to be in a separate transaction because the above should not fail due to errors when scheduling a the next stage
                 // (e.g. CannotScheduleException thrown when there are no agents for run-on-all-agent jobs)
                 transactionTemplate.executeWithExceptionHandling(new com.thoughtworks.go.server.transaction.TransactionCallbackWithoutResult() {
-                    @Override public void doInTransactionWithoutResult(TransactionStatus status) throws Exception {
+                    @Override
+                    public void doInTransactionWithoutResult(TransactionStatus status) throws Exception {
                         if (job.isCompleted()) {
                             Stage stage = stageService.stageById(job.getStageId());
                             automaticallyTriggerRelevantStagesFollowingCompletionOf(stage);
@@ -563,12 +551,10 @@ public class ScheduleService {
             //TODO 2779
             AgentInstances knownAgents = agentService.findRegisteredAgents();
             List<String> liveAgentIdList = getLiveAgentUuids(knownAgents);
-            if (!liveAgentIdList.isEmpty()) {
-                JobInstances jobs = jobInstanceService.findHungJobs(liveAgentIdList);
-                for (JobInstance buildId : jobs) {
-                    LOGGER.warn("Found hung job[id=" + buildId + "], rescheduling it");
-                    rescheduleJob(buildId);
-                }
+            JobInstances jobs = jobInstanceService.findHungJobs(liveAgentIdList);
+            for (JobInstance buildId : jobs) {
+                LOGGER.warn("Found hung job[id=" + buildId + "], rescheduling it");
+                rescheduleJob(buildId);
             }
         } catch (Exception e) {
             LOGGER.error("Error occured during reschedule hung builds: ", e);
@@ -596,7 +582,8 @@ public class ScheduleService {
 
     public void rescheduleAbandonedBuildIfNecessary(final AgentIdentifier identifier) {
         transactionTemplate.execute(new TransactionCallbackWithoutResult() {
-            @Override protected void doInTransactionWithoutResult(TransactionStatus status) {
+            @Override
+            protected void doInTransactionWithoutResult(TransactionStatus status) {
                 final JobInstance jobInstance = agentAssignment.latestActiveJobOnAgent(identifier.getUuid());
                 if (jobInstance != null) {
                     LOGGER.warn(String.format("[Job Reschedule] Found latest incomplete job for agent %s [Job Instance: %s]", identifier, jobInstance));
@@ -612,7 +599,8 @@ public class ScheduleService {
         synchronized (mutexForStageInstance(jobIdentifier)) {
             synchronized (mutexForJob(jobIdentifier)) {
                 transactionTemplate.execute(new TransactionCallbackWithoutResult() {
-                    @Override protected void doInTransactionWithoutResult(TransactionStatus status) {
+                    @Override
+                    protected void doInTransactionWithoutResult(TransactionStatus status) {
                         LOGGER.warn(String.format("[Job Reschedule] Rescheduling and marking old job as ignored: %s", toBeRescheduled));
                         //Reloading it because we want to see the latest committed state after acquiring the mutex.
                         JobInstance oldJob = jobInstanceService.buildById(toBeRescheduled.getId());
@@ -768,7 +756,8 @@ public class ScheduleService {
             this.result = result;
         }
 
-        @Override public void cantSchedule(String description, String pipelineName, String stageName) {
+        @Override
+        public void cantSchedule(String description, String pipelineName, String stageName) {
             result.conflict(description, description, stageScopedHealthState(pipelineName, stageName));
             super.cantSchedule(description, pipelineName, stageName);
         }
@@ -777,19 +766,22 @@ public class ScheduleService {
             return HealthStateType.general(HealthStateScope.forStage(pipelineName, stageName));
         }
 
-        @Override public void previousStageNotRun(String pipelineName, String stageName) {
+        @Override
+        public void previousStageNotRun(String pipelineName, String stageName) {
             String message = previousStageNotRunMessage(pipelineName, stageName);
             result.badRequest(message, message, stageScopedHealthState(pipelineName, stageName));
             super.previousStageNotRun(pipelineName, stageName);
         }
 
-        @Override public void noOperatePermission(String pipelineName, String stageName) {
+        @Override
+        public void noOperatePermission(String pipelineName, String stageName) {
             String message = noOperatePermissionMessage(pipelineName, stageName);
             result.unauthorized(message, message, stageScopedHealthState(pipelineName, stageName));
             super.noOperatePermission(pipelineName, stageName);
         }
 
-        @Override public void cantSchedule(CannotScheduleException e, String pipelineName) {
+        @Override
+        public void cantSchedule(CannotScheduleException e, String pipelineName) {
             result.conflict(e.getMessage(), e.getMessage(), stageScopedHealthState(pipelineName, e.getStageName()));
             super.cantSchedule(e, pipelineName);
         }

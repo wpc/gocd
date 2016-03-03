@@ -216,7 +216,7 @@ public class JobInstanceService implements JobPlanLoader {
         List<JobPlan> jobPlans = orderedScheduledBuilds();
         List<WaitingJobPlan> waitingJobPlans = new ArrayList<WaitingJobPlan>();
         for (JobPlan jobPlan : jobPlans) {
-            String envForJob = environmentConfigService.envForJob(jobPlan.getPipelineName());
+            String envForJob = environmentConfigService.envForPipeline(jobPlan.getPipelineName());
             waitingJobPlans.add(new WaitingJobPlan(jobPlan, envForJob));
         }
         return waitingJobPlans;

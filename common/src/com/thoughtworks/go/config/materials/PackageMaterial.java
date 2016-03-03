@@ -226,9 +226,9 @@ public class PackageMaterial extends AbstractMaterial {
         Map<String, Object> materialMap = new HashMap<String, Object>();
         materialMap.put("type", "package");
         materialMap.put("plugin-id", getPluginId());
-        Map<String, Object> repositoryConfigurationMap = packageDefinition.getRepository().getConfiguration().getConfigurationAsMap(addSecureFields);
+        Map<String, String> repositoryConfigurationMap = packageDefinition.getRepository().getConfiguration().getConfigurationAsMap(addSecureFields);
         materialMap.put("repository-configuration", repositoryConfigurationMap);
-        Map<String, Object> packageConfigurationMap = packageDefinition.getConfiguration().getConfigurationAsMap(addSecureFields);
+        Map<String, String> packageConfigurationMap = packageDefinition.getConfiguration().getConfigurationAsMap(addSecureFields);
         materialMap.put("package-configuration", packageConfigurationMap);
         return materialMap;
     }

@@ -16,22 +16,14 @@
 
 package com.thoughtworks.go.domain;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.thoughtworks.go.config.ArtifactPlan;
-import com.thoughtworks.go.config.ArtifactPlans;
-import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
-import com.thoughtworks.go.config.ArtifactPropertiesGenerators;
-import com.thoughtworks.go.config.EnvironmentVariablesConfig;
-import com.thoughtworks.go.config.Resource;
-import com.thoughtworks.go.config.Resources;
-import com.thoughtworks.go.config.StageConfig;
-import com.thoughtworks.go.config.TestArtifactPlan;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.util.GoConstants;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import com.thoughtworks.go.work.DefaultGoPublisher;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DefaultJobPlan implements JobPlan {
 
@@ -45,6 +37,7 @@ public class DefaultJobPlan implements JobPlan {
     private String agentUuid;
     private EnvironmentVariablesConfig variables;
     private EnvironmentVariablesConfig triggerVariables;
+    private JobAgentConfig jobAgentConfig;
     private boolean fetchMaterials = StageConfig.DEFAULT_FETCH_MATERIALS;
     private boolean cleanWorkingDir = StageConfig.DEFAULT_CLEAN_WORKING_DIR;
 
@@ -55,13 +48,7 @@ public class DefaultJobPlan implements JobPlan {
 
     public DefaultJobPlan(Resources resources, ArtifactPlans plans,
                           ArtifactPropertiesGenerators generators, long jobId,
-                          JobIdentifier identifier) {
-        this(resources, plans, generators, jobId, identifier, null, new EnvironmentVariablesConfig(), new EnvironmentVariablesConfig());
-    }
-
-    public DefaultJobPlan(Resources resources, ArtifactPlans plans,
-                          ArtifactPropertiesGenerators generators, long jobId,
-                          JobIdentifier identifier, String agentUuid, EnvironmentVariablesConfig variables, EnvironmentVariablesConfig triggerTimeVariables) {
+                          JobIdentifier identifier, String agentUuid, EnvironmentVariablesConfig variables, EnvironmentVariablesConfig triggerTimeVariables, JobAgentConfig jobAgentConfig) {
         this.jobId = jobId;
         this.identifier = identifier;
         this.resources = resources;
@@ -70,6 +57,7 @@ public class DefaultJobPlan implements JobPlan {
         this.agentUuid = agentUuid;
         this.variables = variables;
         this.triggerVariables = triggerTimeVariables;
+        this.jobAgentConfig = jobAgentConfig;
     }
 
     public String getPipelineName() {
@@ -263,6 +251,14 @@ public class DefaultJobPlan implements JobPlan {
     }
 
     public boolean shouldCleanWorkingDir() {
-        return cleanWorkingDir;  
+        return cleanWorkingDir;
+    }
+
+    public JobAgentConfig getJobAgentConfig() {
+        return jobAgentConfig;
+    }
+
+    public void setJobAgentConfig(JobAgentConfig jobAgentConfig) {
+        this.jobAgentConfig = jobAgentConfig;
     }
 }

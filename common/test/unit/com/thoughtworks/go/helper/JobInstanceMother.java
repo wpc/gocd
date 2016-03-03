@@ -246,11 +246,11 @@ public class JobInstanceMother {
     }
 
     public static DefaultJobPlan jobPlan(String jobName, long id) {
-        return new DefaultJobPlan(new Resources(new Resource("foo"), new Resource("bar")), new ArtifactPlans(), new ArtifactPropertiesGenerators(), id, defaultJobIdentifier(jobName));
+        return new DefaultJobPlan(new Resources(new Resource("foo"), new Resource("bar")), new ArtifactPlans(), new ArtifactPropertiesGenerators(), id, defaultJobIdentifier(jobName), null, new EnvironmentVariablesConfig(), new EnvironmentVariablesConfig(), null);
     }
 
     public static JobPlan createJobPlan(JobConfig jobConfig, JobIdentifier jobIdentifier, SchedulingContext schedulingContext) {
         return new DefaultJobPlan(jobConfig.resources(), jobConfig.artifactPlans(), jobConfig.getProperties(), -1,
-                jobIdentifier, null, schedulingContext.overrideEnvironmentVariables(jobConfig.getVariables()).getEnvironmentVariablesConfig(), new EnvironmentVariablesConfig());
+                jobIdentifier, null, schedulingContext.overrideEnvironmentVariables(jobConfig.getVariables()).getEnvironmentVariablesConfig(), new EnvironmentVariablesConfig(), null);
     }
 }

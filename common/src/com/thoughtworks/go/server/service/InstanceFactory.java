@@ -26,6 +26,7 @@ import java.util.List;
 
 @Component
 public class InstanceFactory {
+
     public Pipeline createPipelineInstance(PipelineConfig pipelineConfig, BuildCause buildCause, SchedulingContext context, String md5, Clock clock) {
         buildCause.assertMaterialsMatch(pipelineConfig.materialConfigs());
         buildCause.assertPipelineConfigAndMaterialRevisionMatch(pipelineConfig);
@@ -103,6 +104,6 @@ public class InstanceFactory {
 
     public JobPlan createJobPlan(JobConfig config, SchedulingContext context) {
         JobIdentifier identifier = new JobIdentifier();
-        return new DefaultJobPlan(config.resources(), config.artifactPlans(), config.getProperties(), -1, identifier, null, context.overrideEnvironmentVariables(config.getVariables()).getEnvironmentVariablesConfig(), new EnvironmentVariablesConfig());
+        return new DefaultJobPlan(config.resources(), config.artifactPlans(), config.getProperties(), -1, identifier, null, context.overrideEnvironmentVariables(config.getVariables()).getEnvironmentVariablesConfig(), new EnvironmentVariablesConfig(), config.getJobAgentConfig());
     }
 }

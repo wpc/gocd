@@ -1,11 +1,11 @@
 /*
- * Copyright 2015 ThoughtWorks, Inc.
+ * Copyright 2016 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +27,7 @@ import com.thoughtworks.go.presentation.TriStateSelection;
 import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.security.Registration;
 import com.thoughtworks.go.server.domain.AgentInstances;
+import com.thoughtworks.go.server.domain.ElasticAgentMetadata;
 import com.thoughtworks.go.server.domain.Username;
 import com.thoughtworks.go.server.persistence.AgentDao;
 import com.thoughtworks.go.server.service.result.HttpOperationResult;
@@ -44,6 +45,7 @@ import com.thoughtworks.go.utils.Timeout;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -249,8 +251,7 @@ public class AgentService {
 
         List<AgentInstance> failedToDeleteAgents = new ArrayList<AgentInstance>();
         for (AgentInstance agentInstance : agents) {
-            boolean isBuildingOrCancelled = agentInstance.isBuilding() || agentInstance.isCancelled();
-            if (!agentInstance.isDisabled() || isBuildingOrCancelled) {
+            if (!agentInstance.canBeDeleted()) {
                 failedToDeleteAgents.add(agentInstance);
             }
         }
@@ -416,5 +417,13 @@ public class AgentService {
 
     public AgentViewModel findAgentViewModel(String uuid) {
         return toAgentViewModel(findAgentAndRefreshStatus(uuid));
+    }
+
+    public LinkedMultiValueMap<String, ElasticAgentMetadata> allElasticAgents() {
+        return agentInstances.allElasticAgentsGroupedByPluginId();
+    }
+
+    public AgentInstance findElasticAgent(String elasticAgentId, String elasticPluginId) {
+        return agentInstances.findElasticAgent(elasticAgentId, elasticPluginId);
     }
 }

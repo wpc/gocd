@@ -1,23 +1,20 @@
-/*************************GO-LICENSE-START*********************************
- * Copyright 2014 ThoughtWorks, Inc.
+/*
+ * Copyright 2016 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *************************GO-LICENSE-END***********************************/
+ */
 
 package com.thoughtworks.go.domain;
-
-import java.util.Date;
-import java.util.List;
 
 import com.thoughtworks.go.config.AgentConfig;
 import com.thoughtworks.go.config.Resources;
@@ -25,13 +22,18 @@ import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.security.Registration;
 import com.thoughtworks.go.security.X509CertificateGenerator;
 import com.thoughtworks.go.server.domain.AgentInstances;
+import com.thoughtworks.go.server.domain.ElasticAgentMetadata;
 import com.thoughtworks.go.server.service.AgentBuildingInfo;
 import com.thoughtworks.go.server.service.AgentRuntimeInfo;
+import com.thoughtworks.go.server.service.ElasticAgentRuntimeInfo;
 import com.thoughtworks.go.util.StringUtil;
 import com.thoughtworks.go.util.SystemEnvironment;
 import com.thoughtworks.go.util.TimeProvider;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
+
+import java.util.Date;
+import java.util.List;
 
 //TODO put the logic back to the AgentRuntimeInfo for all the sync method
 /**
@@ -53,7 +55,7 @@ public class AgentInstance implements Comparable<AgentInstance> {
     private TimeProvider timeProvider;
     private SystemEnvironment systemEnvironment;
 
-    protected AgentInstance(AgentConfig agentConfig,AgentType agentType, SystemEnvironment systemEnvironment) {
+    protected AgentInstance(AgentConfig agentConfig, AgentType agentType, SystemEnvironment systemEnvironment) {
         this.systemEnvironment = systemEnvironment;
         this.agentRuntimeInfo = AgentRuntimeInfo.initialState(agentConfig);
         this.agentConfigStatus = AgentConfigStatus.Pending;
@@ -97,7 +99,6 @@ public class AgentInstance implements Comparable<AgentInstance> {
         }
     }
 
-    @Deprecated
     public void building(AgentBuildingInfo agentBuildingInfo) {
         syncStatus(AgentRuntimeStatus.Building);
         agentRuntimeInfo.busy(agentBuildingInfo);
@@ -358,6 +359,19 @@ public class AgentInstance implements Comparable<AgentInstance> {
     public boolean needsUpgrade() {
         if(isMissing()) return false;
         return StringUtil.isBlank(agentRuntimeInfo.getAgentLauncherVersion());
+    }
+
+    public boolean isElastic() {
+        return agentRuntimeInfo.isElastic();
+    }
+
+    public ElasticAgentMetadata elasticAgentMetadata() {
+        ElasticAgentRuntimeInfo runtimeInfo = (ElasticAgentRuntimeInfo) this.agentRuntimeInfo;
+        return new ElasticAgentMetadata(getUuid(), runtimeInfo.getElasticAgentId(), runtimeInfo.getElasticPluginId(), this.agentRuntimeInfo.getRuntimeStatus(), getAgentConfigStatus());
+    }
+
+    public boolean canBeDeleted() {
+        return isDisabled() && !(isBuilding() || isCancelled());
     }
 
     public static enum AgentType {

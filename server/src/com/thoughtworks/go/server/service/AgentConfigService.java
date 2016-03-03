@@ -16,8 +16,6 @@
 
 package com.thoughtworks.go.server.service;
 
-import java.util.List;
-
 import com.thoughtworks.go.config.Agents;
 import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.listener.AgentChangeListener;
@@ -26,6 +24,8 @@ import com.thoughtworks.go.server.domain.AgentInstances;
 import com.thoughtworks.go.util.TriState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @understands how to convert persistant Agent configuration to useful objects and back
@@ -88,4 +88,5 @@ public class AgentConfigService {
     public Agents findAgents(List<String> uuids) {
         return agents().filter(uuids);
     }
+
 }

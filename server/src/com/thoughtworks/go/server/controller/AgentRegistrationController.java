@@ -18,7 +18,6 @@ package com.thoughtworks.go.server.controller;
 
 import com.thoughtworks.go.config.AgentConfig;
 import com.thoughtworks.go.config.GoConfigDao;
-import com.thoughtworks.go.config.update.ApproveAgentCommand;
 import com.thoughtworks.go.config.update.UpdateEnvironmentsCommand;
 import com.thoughtworks.go.config.update.UpdateResourceCommand;
 import com.thoughtworks.go.plugin.infra.commons.PluginsZip;
@@ -47,6 +46,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.util.Map;
 
+import static com.thoughtworks.go.config.GoConfigDao.createAddAgentCommand;
 import static com.thoughtworks.go.util.FileDigester.copyAndDigest;
 import static com.thoughtworks.go.util.FileDigester.md5DigestOfStream;
 
@@ -195,17 +195,25 @@ public class AgentRegistrationController {
         Registration keyEntry;
         String preferredHostname = hostname;
         try {
+            preferredHostname = hostname;
             if (goConfigService.serverConfig().shouldAutoRegisterAgentWith(agentAutoRegisterKey)) {
                 preferredHostname = getPreferredHostname(agentAutoRegisterHostname, hostname);
+            }
+
+            AgentConfig agentConfig = new AgentConfig(uuid, preferredHostname, ipAddress);
+            agentConfig.setElasticAgentId(elasticAgentId);
+            agentConfig.setElasticPluginId(elasticPluginId);
+
+            if (goConfigService.serverConfig().shouldAutoRegisterAgentWith(agentAutoRegisterKey)) {
                 LOG.info(String.format("[Agent Auto Registration] Auto registering agent with uuid %s ", uuid));
                 GoConfigDao.CompositeConfigCommand compositeConfigCommand = new GoConfigDao.CompositeConfigCommand(
-                        new ApproveAgentCommand(uuid, ipAddress, preferredHostname),
+                        createAddAgentCommand(agentConfig),
                         new UpdateResourceCommand(uuid, agentAutoRegisterResources),
                         new UpdateEnvironmentsCommand(uuid, agentAutoRegisterEnvironments)
                 );
                 goConfigService.updateConfig(compositeConfigCommand);
             }
-            AgentConfig agentConfig = new AgentConfig(uuid, preferredHostname, ipAddress);
+
             boolean registeredAlready = goConfigService.hasAgent(uuid);
             long usablespace = Long.parseLong(usablespaceAsString);
 

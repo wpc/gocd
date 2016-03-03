@@ -1,18 +1,18 @@
-/*************************GO-LICENSE-START*********************************
- * Copyright 2014 ThoughtWorks, Inc.
+/*
+ * Copyright 2016 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *************************GO-LICENSE-END***********************************/
+ */
 
 package com.thoughtworks.go.util;
 
@@ -172,6 +172,8 @@ public class SystemEnvironment implements Serializable, ConfigDirProvider {
     public static GoSystemProperty<String> GO_UPDATE_SERVER_PUBLIC_KEY_FILE_NAME = new GoStringSystemProperty("go.update.server.public.key.file.name", "go_update_server.pub");
     public static GoSystemProperty<String> GO_UPDATE_SERVER_URL = new GoStringSystemProperty("go.update.server.url", "https://update.go.cd/channels/supported/latest.json");
     public static GoSystemProperty<Boolean> GO_CHECK_UPDATES = new GoBooleanSystemProperty("go.check.updates", true);
+    public static GoSystemProperty<Integer> GO_ELASTIC_PLUGIN_CREATE_AGENT_THREADS = new GoIntSystemProperty("go.elasticplugin.createagent.threads", 10);
+    public static GoSystemProperty<Integer> GO_ELASTIC_PLUGIN_SERVER_PING_THREADS = new GoIntSystemProperty("go.elasticplugin.serverping.threads", 5);
 
     public static GoSystemProperty<Boolean> WEBSOCKET_ENABLED = new GoBooleanSystemProperty("go.agent.websocket.enabled", true);
     public static GoSystemProperty<Boolean> AUTO_REGISTER_LOCAL_AGENT_ENABLED = new GoBooleanSystemProperty("go.auto.register.local.agent.enabled", true);
@@ -414,6 +416,7 @@ public class SystemEnvironment implements Serializable, ConfigDirProvider {
     public int getNumberOfMaterialCheckListener() {
         return Integer.parseInt(getPropertyImpl("material.check.threads", "10"));
     }
+
     public int getNumberOfConfigMaterialCheckListener() {
         return Integer.parseInt(getPropertyImpl("material.config.check.threads", "2"));
     }
@@ -684,15 +687,15 @@ public class SystemEnvironment implements Serializable, ConfigDirProvider {
         set(GO_SERVER_STATE, "passive");
     }
 
-    public String getUpdateServerPublicKeyPath(){
+    public String getUpdateServerPublicKeyPath() {
         return String.format("%s/%s", getConfigDir(), GO_UPDATE_SERVER_PUBLIC_KEY_FILE_NAME.getValue());
     }
 
-    public boolean isGOUpdateCheckEnabled(){
+    public boolean isGOUpdateCheckEnabled() {
         return GO_CHECK_UPDATES.getValue();
     }
 
-    public String getUpdateServerUrl(){
+    public String getUpdateServerUrl() {
         return GO_UPDATE_SERVER_URL.getValue();
     }
 
