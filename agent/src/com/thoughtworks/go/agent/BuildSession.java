@@ -456,7 +456,7 @@ public class BuildSession {
         @Override
         public void setProperty(Property property) {
             try {
-                httpService.postToUrl(propertyURI(property.getKey()), property.getValue());
+                httpService.postProperty(propertyURI(property.getKey()), property.getValue());
             } catch (IOException e) {
                 throw new ArtifactPublishingException(format("Failed to set property %s with value %s", property.getKey(), property.getValue()), e);
             }

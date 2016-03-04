@@ -71,6 +71,12 @@ public class Message implements Serializable {
         this.data = data;
     }
 
+    public Message(Action action, Object data, String ackId) {
+        this.action = action;
+        this.data = data;
+        this.ackId = ackId;
+    }
+
     public Action getAction() {
         return action;
     }

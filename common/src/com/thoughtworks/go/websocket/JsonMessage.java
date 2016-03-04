@@ -51,13 +51,15 @@ public class JsonMessage {
 
             Action action = Action.valueOf(obj.get("action").getAsString());
             Object data = JsonMessage.deserialize(obj.get("data"));
-            return new Message(action, data);
+            String ackId = obj.get("ackId").getAsString();
+            return new Message(action, data, ackId);
         }
 
         @Override
         public JsonElement serialize(Message src, Type typeOfSrc, JsonSerializationContext context) {
             JsonObject obj = new JsonObject();
             obj.addProperty("action", src.getAction().toString());
+            obj.addProperty("ackId", src.getAckId());
             obj.add("data", JsonMessage.serialize(src.getData()));
             return obj;
         }
