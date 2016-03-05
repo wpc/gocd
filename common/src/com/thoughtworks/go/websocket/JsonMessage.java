@@ -24,6 +24,8 @@ import com.thoughtworks.go.domain.builder.Builder;
 import com.thoughtworks.go.domain.materials.Material;
 import com.thoughtworks.go.domain.materials.Modification;
 import com.thoughtworks.go.domain.materials.Modifications;
+import com.thoughtworks.go.server.service.AgentRuntimeInfo;
+import com.thoughtworks.go.server.service.ElasticAgentRuntimeInfo;
 
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -35,6 +37,7 @@ public class JsonMessage {
         GsonBuilder builder = new GsonBuilder()
                 .registerTypeAdapter(Builder.class, new ObjectConverter())
                 .registerTypeAdapter(JobPlan.class, new ObjectConverter())
+                .registerTypeAdapter(AgentRuntimeInfo.class, new AgentRuntimeInfoConverter())
                 .registerTypeAdapter(Material.class, new ObjectConverter())
                 .registerTypeAdapter(Message.class, new MessageConverter())
                 .registerTypeAdapter(FetchHandler.class, new ObjectConverter())
@@ -128,4 +131,16 @@ public class JsonMessage {
         return gson;
     }
 
+    private static class AgentRuntimeInfoConverter implements JsonSerializer<AgentRuntimeInfo>, JsonDeserializer<AgentRuntimeInfo> {
+        @Override
+        public AgentRuntimeInfo deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            return getGson().fromJson(json, ElasticAgentRuntimeInfo.class);
+        }
+
+        @Override
+        public JsonElement serialize(AgentRuntimeInfo src, Type typeOfSrc, JsonSerializationContext context) {
+            return JsonMessage.serialize(src);
+        }
+
+    }
 }

@@ -27,7 +27,7 @@ import static java.lang.String.format;
 
 @ConfigTag("agentConfig")
 @ConfigCollection(value = ConfigurationProperty.class)
-public class JobAgentConfig extends Configuration implements Validatable {
+public class        JobAgentConfig extends Configuration implements Validatable {
 
     public static final String PLUGIN_ID = "pluginId";
     private final ConfigErrors errors = new ConfigErrors();
