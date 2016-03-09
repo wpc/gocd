@@ -21,8 +21,7 @@ import org.apache.commons.httpclient.URIException;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,6 +60,20 @@ public class UrlUtil {
         uri.setEscapedQuery(QueryTuple.toString(splitQuery));
         return uri.toString();
     }
+
+    public static String getUrlPathAndQuery(String rawUrl) {
+        try {
+            java.net.URI uri = new URL(rawUrl).toURI();
+            String path = uri.getRawPath();
+            String query = uri.getRawQuery();
+            return query == null ? path : path + "?" + query;
+        } catch (MalformedURLException e) {
+            throw bomb(e);
+        } catch (URISyntaxException e) {
+            throw bomb(e);
+        }
+    }
+
 
     private static String encode(String query) {
         if (query == null) {

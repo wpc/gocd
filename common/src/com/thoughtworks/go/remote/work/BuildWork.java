@@ -50,13 +50,14 @@ import org.jdom.Element;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.thoughtworks.go.util.ArtifactLogUtil.getConsoleOutputFolderAndFileNameUrl;
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 import static com.thoughtworks.go.util.ExceptionUtils.messageOf;
+import static com.thoughtworks.go.util.UrlUtil.getUrlPathAndQuery;
 import static java.lang.String.format;
 
 public class BuildWork implements Work {
@@ -282,7 +283,7 @@ public class BuildWork implements Work {
         setupEnvrionmentContext(envContext);
         plan.applyTo(envContext);
 
-        String consoleURI = urlService.getUploadUrlOfAgent(plan.getIdentifier(), getConsoleOutputFolderAndFileNameUrl());
+        String consoleURI = getUrlPathAndQuery(urlService.getUploadUrlOfAgent(plan.getIdentifier(), getConsoleOutputFolderAndFileNameUrl()));
 
         ArrayList<BuildCommand> commands = new ArrayList<>();
 
@@ -292,8 +293,8 @@ public class BuildWork implements Work {
         sessionSettings.put("buildLocatorForDisplay", plan.getIdentifier().buildLocatorForDisplay());
         sessionSettings.put("consoleURI", consoleURI);
         sessionSettings.put("buildId", plan.getIdentifier().getBuildId().toString());
-        sessionSettings.put("artifactUploadBaseUrl", urlService.getUploadBaseUrlOfAgent(plan.getIdentifier()));
-        sessionSettings.put("propertyBaseUrl", urlService.getPropertiesUrl(plan.getIdentifier(), ""));
+        sessionSettings.put("artifactUploadBaseUrl", getUrlPathAndQuery(urlService.getUploadBaseUrlOfAgent(plan.getIdentifier())));
+        sessionSettings.put("propertyBaseUrl", getUrlPathAndQuery(urlService.getPropertiesUrl(plan.getIdentifier(), "")));
         commands.add(new BuildCommand("start", sessionSettings));
 
         commands.add(new BuildCommand("export", envContext.getProperties()));
@@ -305,7 +306,6 @@ public class BuildWork implements Work {
         commands.add(new BuildCommand("end").runIf("any"));
         return new BuildCommand("compose", commands);
     }
-
 
     private BuildCommand createMainBuildCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
         List<BuildCommand> commands = new ArrayList<>();
