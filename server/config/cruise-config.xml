@@ -25,10 +25,6 @@
         <jobs>
           <job name="defaultJob">
             <tasks>
-              <exec command="go">
-                <arg>version</arg>
-                <runif status="passed" />
-              </exec>
               <exec command="./build.sh" workingdir="src/github.com/gocd-contrib/gocd-golang-agent">
                 <runif status="passed" />
               </exec>
