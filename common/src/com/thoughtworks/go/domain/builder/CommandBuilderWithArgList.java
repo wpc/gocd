@@ -16,15 +16,15 @@
 
 package com.thoughtworks.go.domain.builder;
 
-import java.io.File;
-
-import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.domain.RunIfConfigs;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.util.SystemUtil;
 import com.thoughtworks.go.util.command.CommandLine;
 import com.thoughtworks.go.util.command.EnvironmentVariableContext;
 import org.apache.commons.lang.StringUtils;
+
+import java.io.File;
 
 public class CommandBuilderWithArgList extends BaseCommandBuilder {
     private String[] args;
@@ -57,10 +57,7 @@ public class CommandBuilderWithArgList extends BaseCommandBuilder {
 
     @Override
     public BuildCommand buildCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
-        String[] cmdArgs = new String[args.length + 1];
-        cmdArgs[0] = this.command;
-        System.arraycopy(args, 0, cmdArgs, 1, args.length);
-        BuildCommand exec = new BuildCommand("exec", cmdArgs);
+        BuildCommand exec = BuildCommand.exec(this.command, args);
         exec.setRunIfConfig(super.conditions.aggregate().toString());
         if (workingDir != null) {
             exec.setWorkingDirectory(workingDir.getPath());

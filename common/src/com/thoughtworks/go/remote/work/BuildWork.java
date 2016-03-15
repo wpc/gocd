@@ -18,7 +18,6 @@
 
 package com.thoughtworks.go.remote.work;
 
-import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.config.ArtifactPlan;
 import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
 import com.thoughtworks.go.config.RunIfConfig;
@@ -28,6 +27,7 @@ import com.thoughtworks.go.domain.materials.MaterialAgentFactory;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageAsRepositoryExtension;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.publishers.GoArtifactsManipulator;
 import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.remote.BuildRepositoryRemote;
@@ -50,10 +50,11 @@ import org.jdom.Element;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.*;
+import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static com.thoughtworks.go.plugin.api.BuildCommand.toMap;
 import static com.thoughtworks.go.util.ArtifactLogUtil.getConsoleOutputFolderAndFileNameUrl;
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 import static com.thoughtworks.go.util.ExceptionUtils.messageOf;
@@ -287,7 +288,7 @@ public class BuildWork implements Work {
 
         ArrayList<BuildCommand> commands = new ArrayList<>();
 
-        Map<String, Object> sessionSettings = new HashMap<>();
+        Map<String, String> sessionSettings = new HashMap<>();
 
         sessionSettings.put("buildLocator", plan.getIdentifier().buildLocator());
         sessionSettings.put("buildLocatorForDisplay", plan.getIdentifier().buildLocatorForDisplay());
@@ -298,11 +299,11 @@ public class BuildWork implements Work {
         commands.add(new BuildCommand("start", sessionSettings));
 
         commands.add(new BuildCommand("export", envContext.getProperties()));
-        commands.add(new BuildCommand("echo", "Job started."));
+        commands.add(BuildCommand.echo("Job started."));
         commands.add(createPrepareCommand(scmExtension));
         commands.add(createMainBuildCommand(taskExtension, envContext));
         commands.add(new BuildCommand("reportCompleted").runIf("any"));
-        commands.add(new BuildCommand("echo", "Job completed " + plan.getIdentifier().buildLocatorForDisplay()).runIf("any"));
+        commands.add(BuildCommand.echo("Job completed " + plan.getIdentifier().buildLocatorForDisplay()).runIf("any"));
         commands.add(new BuildCommand("end").runIf("any"));
         return new BuildCommand("compose", commands);
     }
@@ -310,39 +311,40 @@ public class BuildWork implements Work {
     private BuildCommand createMainBuildCommand(TaskExtension taskExtension, EnvironmentVariableContext envContext) {
         List<BuildCommand> commands = new ArrayList<>();
 
-        commands.add(new BuildCommand("echo", "Start to build"));
-        commands.add(new BuildCommand("reportCurrentStatus", JobState.Building.name()));
+        commands.add(BuildCommand.echo("Start to build"));
+        commands.add(new BuildCommand("reportCurrentStatus", toMap("jobState", JobState.Building.name())));
 
         commands.add(createBuildersCommand(taskExtension, envContext));
 
         commands.add(new BuildCommand("reportCompleting").runIf("any"));
 
-        commands.add(new BuildCommand("echo", "Current job status: passed"));
-        commands.add(new BuildCommand("echo", "Current job status: failed").runIf("failed"));
-        commands.add(new BuildCommand("reportCurrentStatus", JobState.Completing.name()).runIf("any"));
+        commands.add(BuildCommand.echo("Current job status: passed"));
+        commands.add( BuildCommand.echo("Current job status: failed").runIf("failed"));
+        commands.add(new BuildCommand("reportCurrentStatus", toMap("jobState", JobState.Completing.name())).runIf("any"));
 
-        commands.add(new BuildCommand("echo", "Start to create properties").runIf("any"));
+        commands.add(BuildCommand.echo("Start to create properties").runIf("any"));
 
         for (ArtifactPropertiesGenerator generator : getArtifactPropertiesGenerators()) {
-            BuildCommand cmd = new BuildCommand("generateProperty", generator.getName(), generator.getSrc(), generator.getXpath());
+            BuildCommand cmd = new BuildCommand("generateProperty", toMap("name", generator.getName(), "src", generator.getSrc(), "xpath", generator.getXpath()));
             cmd.setWorkingDirectory(workingDirectory.getPath());
             commands.add(cmd.runIf("any"));
         }
 
-        commands.add(new BuildCommand("echo", "Start to upload").runIf("any"));
+        commands.add(BuildCommand.echo("Start to upload").runIf("any"));
 
         for (ArtifactPlan ap : plan.getArtifactPlans()) {
-            BuildCommand cmd = new BuildCommand("uploadArtifact", ap.getSrc(), ap.getDest());
+            BuildCommand cmd = new BuildCommand("uploadArtifact", toMap("src", ap.getSrc(), "dest", ap.getDest()));
             cmd.setWorkingDirectory(workingDirectory.getPath());
             commands.add(cmd.runIf("any"));
         }
 
-        List<String> testReportArgs = new ArrayList<>();
-        for (ArtifactPlan artifactPlan : artifactPlansWithType(ArtifactType.unit)) {
-            testReportArgs.add(artifactPlan.getSrc());
+        Map<String, String> testReportArgs = new HashMap<>();
+        List<ArtifactPlan> artifactPlanList = artifactPlansWithType(ArtifactType.unit);
+        for (int i=0; i<artifactPlanList.size(); i++) {
+            testReportArgs.put(String.valueOf(i), artifactPlanList.get(0).getSrc());
         }
 
-        BuildCommand uploadTests = new BuildCommand("generateTestReport", testReportArgs.toArray(new String[testReportArgs.size()]));
+        BuildCommand uploadTests = new BuildCommand("generateTestReport", testReportArgs);
         uploadTests.setWorkingDirectory(workingDirectory.getPath());
 
         commands.add(uploadTests.runIf("any"));
@@ -352,15 +354,15 @@ public class BuildWork implements Work {
     private BuildCommand createPrepareCommand(SCMExtension scmExtension) {
         List<BuildCommand> commands = new ArrayList<>();
 
-        commands.add(new BuildCommand("echo", "Start to prepare"));
-        commands.add(new BuildCommand("reportCurrentStatus", JobState.Preparing.name()));
+        commands.add(BuildCommand.echo("Start to prepare"));
+        commands.add(new BuildCommand("reportCurrentStatus", toMap("jobState", JobState.Preparing.name())));
 
         commands.add(new BuildCommand("export")); //dump env
 
         if (!plan.shouldFetchMaterials()) {
-            commands.add(new BuildCommand("echo", "Skipping material update since stage is configured not to fetch materials"));
+            commands.add(BuildCommand.echo("Skipping material update since stage is configured not to fetch materials"));
         } else {
-            commands.add(new BuildCommand("echo", "Start to update materials.\n"));
+            commands.add(BuildCommand.echo("Start to update materials.\n"));
             for (MaterialRevision revision : materialRevisions.getRevisions())
                 commands.add(revision.getMaterial().updateTo(revision, scmExtension, workingDirectory));
         }
@@ -381,9 +383,9 @@ public class BuildWork implements Work {
         List<BuildCommand> commands = new ArrayList<>();
         for (Builder builder : assignment.getBuilders()) {
             List<BuildCommand> builderCommands = new ArrayList<>();
-            builderCommands.add(new BuildCommand("echo", "Current job status: passed"));
-            builderCommands.add(new BuildCommand("echo", "Current job status: failed").runIf("failed"));
-            builderCommands.add(new BuildCommand("echo", "Start to execute task: " + builder.getDescription()));
+            builderCommands.add(BuildCommand.echo("Current job status: passed"));
+            builderCommands.add(BuildCommand.echo("Current job status: failed").runIf("failed"));
+            builderCommands.add(BuildCommand.echo("Start to execute task: " + builder.getDescription()));
             builderCommands.add(builder.buildCommand(taskExtension, envContext));
             commands.add(new BuildCommand("compose", builderCommands));
         }

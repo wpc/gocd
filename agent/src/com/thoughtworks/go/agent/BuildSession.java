@@ -1,5 +1,6 @@
 package com.thoughtworks.go.agent;
 
+import com.google.gson.Gson;
 import com.thoughtworks.go.agent.service.AgentWebsocketService;
 import com.thoughtworks.go.config.ArtifactPlan;
 import com.thoughtworks.go.domain.*;
@@ -38,7 +39,6 @@ import org.slf4j.LoggerFactory;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,6 +46,7 @@ import static java.lang.String.format;
 
 public class BuildSession {
     private static final Logger LOG = LoggerFactory.getLogger(BuildSession.class);
+    private static final Gson gson = new Gson();
 
     private ConsoleOutputTransmitter console;
     private String buildId;
@@ -135,17 +136,18 @@ public class BuildSession {
     }
 
     private boolean callAPIBasedTaskExtension(BuildCommand command) {
-        final Map<String, Object> callParams = (Map<String, Object>) command.getArgs()[0];
-        Map<String, Map<String, String>> config = (Map<String, Map<String, String>>) callParams.get("taskConfig");
+        final Map<String, String> callParams = command.getArgs();
+        Map config = gson.fromJson(callParams.get("taskConfig"), Map.class);
         final TaskConfig taskConfig = new TaskConfig();
-        for (String key : config.keySet()) {
-            String value = config.get(key).get("value");
-            taskConfig.add(new com.thoughtworks.go.plugin.api.config.Property(key, value, null));
+        for (Object key : config.keySet()) {
+            Map map = (Map) config.get(key);
+            String value = map.get("value").toString();
+            taskConfig.add(new com.thoughtworks.go.plugin.api.config.Property(key.toString(), value, null));
         }
         final EnvironmentVariableContext environmentVariableContext = new EnvironmentVariableContext();
-        Map<String, String> environmentVariables = (Map<String, String>) callParams.get("environmentVariables");
-        for (String key : environmentVariables.keySet()) {
-            environmentVariableContext.setProperty(key, environmentVariables.get(key), false);
+        Map environmentVariables = gson.fromJson(callParams.get("environmentVariables"), Map.class);
+        for (Object key : environmentVariables.keySet()) {
+            environmentVariableContext.setProperty(key.toString(), environmentVariables.get(key).toString(), false);
         }
         ExecutionResult executionResult = taskExtension.execute((String) callParams.get("pluginId"), new ActionWithReturn<com.thoughtworks.go.plugin.api.task.Task, ExecutionResult>() {
             @Override
@@ -169,32 +171,31 @@ public class BuildSession {
     }
 
     private boolean callExtension(BuildCommand command) {
-        Map<String, Object> callParams = (Map<String, Object>) command.getArgs()[0];
+        Map<String, String> callParams = command.getArgs();
         PluginRequestHelper pluginRequestHelper = new PluginRequestHelper(pluginManager,
-                null, (String) callParams.get("name"));
+                null, callParams.get("name"));
 
         pluginRequestHelper.submitRequest(
-                (String) callParams.get("pluginId"),
-                (String) callParams.get("requestName"),
-                (String) callParams.get("extensionVersion"),
-                (String) callParams.get("requestBody"),
-                (Map<String, String>) callParams.get("requestParams"));
+                callParams.get("pluginId"),
+                callParams.get("requestName"),
+                callParams.get("extensionVersion"),
+                callParams.get("requestBody"),
+               null);
         return true;
     }
 
 
     private boolean downloadDir(BuildCommand command) {
-        String[] args = command.getStringArgs();
-        final String url = args[0];
-        final String src = args[1];
-        final String dest = args[2];
+        final String url = command.getArgs().get("url");
+        final String src = command.getArgs().get("src");
+        final String dest = command.getArgs().get("dest");
 
         String checksumUrl = null;
         ChecksumFileHandler checksumFileHandler = null;
-
-        if (args.length > 4) {
-            checksumUrl = args[3];
-            checksumFileHandler = new ChecksumFileHandler(new File(args[4]));
+        if (command.getArgs().size() > 4) {
+            checksumUrl = command.getArgs().get("checksumUrl");
+            String checksumFile = command.getArgs().get("checksumFile");
+            checksumFileHandler = new ChecksumFileHandler(new File(checksumFile));
         }
 
         DirHandler handler = new DirHandler(src, new File(dest));
@@ -214,17 +215,17 @@ public class BuildSession {
     }
 
     private boolean downloadFile(BuildCommand command) {
-        String[] args = command.getStringArgs();
-        final String url = args[0];
-        final String src = args[1];
-        final String dest = args[2];
+        final String url = command.getArgs().get("url");
+        final String src = command.getArgs().get("src");
+        final String dest = command.getArgs().get("dest");
 
         String checksumUrl = null;
         ChecksumFileHandler checksumFileHandler = null;
 
-        if (args.length > 4) {
-            checksumUrl = args[3];
-            checksumFileHandler = new ChecksumFileHandler(new File(args[4]));
+        if (command.getArgs().size() > 4) {
+            checksumUrl = command.getArgs().get("checksumUrl");
+            String checksumFile = command.getArgs().get("checksumFile");
+            checksumFileHandler = new ChecksumFileHandler(new File(checksumFile));
         }
 
         FileHandler handler = new FileHandler(new File(dest), src);
@@ -244,22 +245,22 @@ public class BuildSession {
 
     private boolean generateTestReport(BuildCommand command) {
         TestReporter testReporter = new TestReporter(this.publisher, command.getWorkingDirectory());
-        testReporter.generateAndUpload(command.getStringArgs());
+        testReporter.generateAndUpload(command.getArgsList(command.getArgs().size()));
         return true;
     }
 
     private boolean uploadArtifact(BuildCommand command) {
-        final String src = (String) command.getArgs()[0];
-        final String dest = (String) command.getArgs()[1];
+        final String src = command.getArgs().get("src");
+        final String dest = command.getArgs().get("dest");
         ArtifactPlan p = ArtifactPlan.create(ArtifactType.file, src, dest);
         p.publish(this.publisher, new File(command.getWorkingDirectory()));
         return true;
     }
 
     private boolean generateProperty(BuildCommand command) {
-        String name = (String) command.getArgs()[0];
-        String src = (String) command.getArgs()[1];
-        String xpath = (String) command.getArgs()[2];
+        String name = command.getArgs().get("name");
+        String src = command.getArgs().get("src");
+        String xpath = command.getArgs().get("xpath");
         File file = new File(command.getWorkingDirectory(), src);
         String indent = "             ";
         if (!file.exists()) {
@@ -284,7 +285,7 @@ public class BuildSession {
     }
 
     private boolean reportCurrentStatus(BuildCommand command) {
-        JobState jobState = JobState.valueOf((String) command.getArgs()[0]);
+        JobState jobState = JobState.valueOf(command.getArgs().get("jobState"));
         websocketService.send(new Message(Action.reportCurrentStatus, new Report(agentRuntimeInfo, buildId, jobState, null)));
         return true;
     }
@@ -304,22 +305,23 @@ public class BuildSession {
 
     private boolean test(BuildCommand command) {
         boolean success = false;
-        if (command.getArgs()[0].equals("-d")) {
-            success = new File((String) command.getArgs()[1]).isDirectory();
+        if ("-d".equals(command.getArgs().get("flag"))) {
+            success = new File(command.getArgs().get("path")).isDirectory();
         }
         return success;
     }
 
     private boolean exec(BuildCommand command) {
-        String execCommand = (String) command.getArgs()[0];
+        String execCommand = command.getArgs().get("command");
         CommandLine commandLine = CommandLine.createCommandLine(execCommand);
 
         if (command.getWorkingDirectory() != null) {
             commandLine.withWorkingDir(new File(command.getWorkingDirectory()));
         }
 
-        for (int i = 1; i < command.getArgs().length; i++) {
-            commandLine.withArg(new StringArgument(command.getArgs()[i].toString()));
+        String[] args = command.getArgsList(command.getArgs().size() - 1);
+        for (String arg : args) {
+            commandLine.withArg(new StringArgument(arg));
         }
 
         int exitCode = commandLine.run(new ProcessOutputStreamConsumer<>(console, console), agentRuntimeInfo.getUUId());
@@ -338,16 +340,16 @@ public class BuildSession {
     }
 
     private boolean export(BuildCommand command) {
-        if (command.getArgs().length > 0) {
-            Map<String, String> vars = (Map<String, String>) command.getArgs()[0];
-            envs.putAll(vars);
+        if (command.getArgs().size() > 0) {
+            envs.putAll(command.getArgs());
             return true;
         } else {
-            ArrayList<String> list = new ArrayList<>(envs.size());
+            StringBuffer buffer = new StringBuffer();
             for (String var : envs.keySet()) {
-                list.add(format("export %s=%s", var, envs.get(var)));
+                buffer.append(format("export %s=%s", var, envs.get(var)));
+                buffer.append("\n");
             }
-            return process(new BuildCommand("echo", list.toArray(new String[list.size()])));
+            return process(BuildCommand.echo(buffer.toString()));
         }
     }
 
@@ -360,19 +362,20 @@ public class BuildSession {
     }
 
     private boolean echo(BuildCommand command) {
-        for (Object line : command.getArgs()) {
-            console.consumeLine(line.toString());
+        for (String line : command.getArgsList(command.getArgs().size())) {
+            console.consumeLine(line);
         }
         return true;
     }
 
     private boolean start(BuildCommand command) {
-        Map<String, String> settings = (Map<String, String>) command.getArgs()[0];
+        SystemEnvironment env = new SystemEnvironment();
+        Map<String, String> settings = command.getArgs();
         String buildLocator = settings.get("buildLocator");
         String buildLocatorForDisplay = settings.get("buildLocatorForDisplay");
-        final String consoleURI = settings.get("consoleURI");
-        String artifactUploadBaseUrl = settings.get("artifactUploadBaseUrl");
-        String propertyBaseUrl = settings.get("propertyBaseUrl");
+        final String consoleURI = env.getServiceUrl() + settings.get("consoleURI");
+        String artifactUploadBaseUrl = env.getServiceUrl() + settings.get("artifactUploadBaseUrl");
+        String propertyBaseUrl = env.getServiceUrl() + settings.get("propertyBaseUrl");
         this.buildId = settings.get("buildId");
 
         agentRuntimeInfo.busy(new AgentBuildingInfo(buildLocatorForDisplay, buildLocator));

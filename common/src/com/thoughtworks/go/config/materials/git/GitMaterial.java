@@ -16,7 +16,6 @@
 
 package com.thoughtworks.go.config.materials.git;
 
-import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.config.materials.ScmMaterial;
 import com.thoughtworks.go.config.materials.ScmMaterialConfig;
 import com.thoughtworks.go.config.materials.SubprocessExecutionContext;
@@ -27,6 +26,7 @@ import com.thoughtworks.go.domain.materials.git.GitCommand;
 import com.thoughtworks.go.domain.materials.git.GitMaterialInstance;
 import com.thoughtworks.go.domain.materials.svn.MaterialUrl;
 import com.thoughtworks.go.plugin.access.scm.SCMExtension;
+import com.thoughtworks.go.plugin.api.BuildCommand;
 import com.thoughtworks.go.server.transaction.TransactionSynchronizationManager;
 import com.thoughtworks.go.util.GoConstants;
 import com.thoughtworks.go.util.StringUtil;
@@ -44,6 +44,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.thoughtworks.go.plugin.api.BuildCommand.toMap;
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 import static com.thoughtworks.go.util.ExceptionUtils.bombIfFailedToRunCommandLine;
 import static com.thoughtworks.go.util.FileUtil.createParentFolderIfNotExist;
@@ -157,10 +158,7 @@ public class GitMaterial extends ScmMaterial {
     }
 
     private BuildCommand remoteGit(File workingdir, String...args) {
-        String[] f = new String[args.length + 1];
-        f[0] = "git";
-        System.arraycopy(args, 0, f, 1, args.length);
-        BuildCommand command = new BuildCommand("exec", f);
+        BuildCommand command = BuildCommand.exec("git", args);
         command.setWorkingDirectory(workingdir.getPath());
         return command;
     }
@@ -168,25 +166,25 @@ public class GitMaterial extends ScmMaterial {
     @Override
     public BuildCommand updateTo(MaterialRevision revision, SCMExtension scmExtension, File baseDir) {
         List<BuildCommand> commands = new ArrayList<>();
-        commands.add(new BuildCommand("echo", format("[%s] Start updating %s at revision %s from %s", GoConstants.PRODUCT_NAME, updatingTarget(), revision.getRevision(), url)));
+        commands.add(BuildCommand.echo(format("[%s] Start updating %s at revision %s from %s", GoConstants.PRODUCT_NAME, updatingTarget(), revision.getRevision(), url)));
         File destDir = workingdir(baseDir);
         BuildCommand clone = remoteGit(new File("./"), "clone", "--depth=2", "-n", "--branch=" + branch, url.forCommandline(), destDir.getPath());
-        clone.setTest(new BuildCommand("test", "-d", new File(destDir, ".git").getPath()), false);
+        clone.setTest(new BuildCommand("test", toMap("flag", "-d", "path", new File(destDir, ".git").getPath())), false);
         commands.add(clone);
 
-        commands.add(new BuildCommand("echo", String.format("[GIT] Fetch and reset in working directory %s", baseDir)));
-        commands.add(new BuildCommand("echo", "[GIT] Cleaning all unversioned files in working copy"));
+        commands.add(BuildCommand.echo(String.format("[GIT] Fetch and reset in working directory %s", baseDir)));
+        commands.add(BuildCommand.echo("[GIT] Cleaning all unversioned files in working copy"));
         commands.add(remoteGit(destDir, "clean", "-df"));
 
-        commands.add(new BuildCommand("echo", "[GIT] Fetching changes"));
+        commands.add(BuildCommand.echo("[GIT] Fetching changes"));
         commands.add(remoteGit(destDir, "fetch", "origin"));
 
         //todo: removeSubmoduleSectionsFromGitConfig
-        commands.add(new BuildCommand("echo", "[GIT] Performing git gc"));
+        commands.add(BuildCommand.echo("[GIT] Performing git gc"));
         commands.add(remoteGit(destDir, "gc", "--auto"));
 
         String rev = revision.getRevision().getRevision();
-        commands.add(new BuildCommand("echo", "[GIT] Updating working copy to revision " + rev));
+        commands.add(BuildCommand.echo("[GIT] Updating working copy to revision " + rev));
         commands.add(remoteGit(destDir, "reset", "--hard", rev));
         return new BuildCommand("compose", commands);
     }

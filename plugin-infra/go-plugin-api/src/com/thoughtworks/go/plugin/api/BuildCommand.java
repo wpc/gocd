@@ -1,11 +1,11 @@
 package com.thoughtworks.go.plugin.api;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class BuildCommand {
-
 
     public static class Test {
         public final BuildCommand command;
@@ -25,8 +25,35 @@ public class BuildCommand {
         }
     }
 
+    public static Map<String, String> toMap(String... args) {
+        Map<String, String> ret = new HashMap<>();
+        for (int i=0; i<args.length; i+=2) {
+            ret.put(args[i], args[i+1]);
+        }
+        return ret;
+    }
+
+    public static Map<String, String> toList(String... args) {
+        Map<String, String> ret = new HashMap<>();
+        for(int i=0; i<args.length; i++) {
+            ret.put(String.valueOf(i), args[i]);
+        }
+        return ret;
+    }
+
+    public static BuildCommand exec(String command, String[] args) {
+        Map<String, String> cmdArgs = new HashMap<>();
+        cmdArgs.put("command", command);
+        cmdArgs.putAll(toList(args));
+        return new BuildCommand("exec", cmdArgs);
+    }
+
+    public static BuildCommand echo(String... content) {
+        return new BuildCommand("echo", toList(content));
+    }
+
     private final String name;
-    private Object[] args;
+    private Map<String, String> args = new HashMap<>();
     private BuildCommand[] subCommands;
     private String workingDirectory;
     private Test test;
@@ -34,7 +61,6 @@ public class BuildCommand {
 
     public BuildCommand(String name) {
         this.name = name;
-        this.args = new Object[0];
         this.subCommands = new BuildCommand[0];
     }
 
@@ -48,12 +74,7 @@ public class BuildCommand {
         this.subCommands = subCommand;
     }
 
-    public BuildCommand(String name, String... args) {
-        this(name);
-        this.args = args;
-    }
-
-    public BuildCommand(String name, Map... args) {
+    public BuildCommand(String name, Map<String, String> args) {
         this(name);
         this.args = args;
     }
@@ -62,16 +83,8 @@ public class BuildCommand {
         return name;
     }
 
-    public Object[] getArgs() {
+    public Map<String, String> getArgs() {
         return args;
-    }
-
-    public String[] getStringArgs() {
-        String[] result = new String[args.length];
-        for (int i = 0; i < args.length; i++) {
-            result[i] = args[i].toString();
-        }
-        return result;
     }
 
     public String dump(int indent) {
@@ -81,8 +94,8 @@ public class BuildCommand {
         }
         sb.append(name);
 
-        for (Object arg : args) {
-            sb.append(" ").append('\"').append(arg.toString()).append('\"');
+        for (String argName : args.keySet()) {
+            sb.append(" ").append(argName).append("='" + args.get(argName)).append("'");
         }
 
         if(!"passed".equals(runIfConfig)) {
@@ -98,7 +111,7 @@ public class BuildCommand {
     public String toString() {
         return "BuildCommand{" +
                 "name='" + name + '\'' +
-                ", args=" + Arrays.toString(args) +
+                ", args=" + args +
                 ", subCommands=" + Arrays.toString(subCommands) +
                 ", workingDirectory='" + workingDirectory + '\'' +
                 ", test=" + test +
@@ -127,10 +140,6 @@ public class BuildCommand {
         return subCommands;
     }
 
-    public void setSubCommands(BuildCommand[] subCommands) {
-        this.subCommands = subCommands;
-    }
-
     public String getRunIfConfig() {
         return runIfConfig;
     }
@@ -144,5 +153,11 @@ public class BuildCommand {
         return this;
     }
 
-
+    public String[] getArgsList(int size) {
+        String[] sources = new String[size];
+        for (int i=0; i<size; i++) {
+            sources[i] = this.getArgs().get(String.valueOf(i));
+        }
+        return sources;
+    }
 }

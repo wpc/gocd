@@ -301,6 +301,7 @@ public class AgentController {
                 break;
             case ack:
                 callbacks.remove(message.getData()).call();
+                break;
             case cmd:
                 agentRuntimeInfo.idle();
                 try {

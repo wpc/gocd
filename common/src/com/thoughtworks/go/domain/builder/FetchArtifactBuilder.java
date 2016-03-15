@@ -28,6 +28,8 @@ import com.thoughtworks.go.work.DefaultGoPublisher;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class FetchArtifactBuilder extends Builder {
     public static Logger LOG = Logger.getLogger(FetchArtifactBuilder.class);
@@ -71,24 +73,26 @@ public class FetchArtifactBuilder extends Builder {
 
         if (handler instanceof DirHandler) {
             DirHandler dirHandler = (DirHandler) handler;
-            download = new BuildCommand("downloadDir",
-                    artifactUrl,
-                    dirHandler.getSrcFile(),
-                    dirHandler.getDestOnAgent().getPath(),
-                    checksumUrl,
-                    checksumFile);
+            Map<String, String> args = new HashMap<>();
+            args.put("url", artifactUrl);
+            args.put("src", dirHandler.getSrcFile());
+            args.put("dest", dirHandler.getDestOnAgent().getPath());
+            args.put("checksumUrl", checksumUrl);
+            args.put("checksumFile", checksumFile);
+            download = new BuildCommand("downloadDir", args);
         } else {
             FileHandler fileHandler = (FileHandler) handler;
-            download = new BuildCommand("downloadFile",
-                    artifactUrl,
-                    fileHandler.getSrcFile(),
-                    fileHandler.getArtifact().getPath(),
-                    checksumUrl,
-                    checksumFile);
+            Map<String, String> args = new HashMap<>();
+            args.put("url", artifactUrl);
+                    args.put("src", fileHandler.getSrcFile());
+                    args.put("dest", fileHandler.getArtifact().getPath());
+                    args.put("checksumUrl", checksumUrl);
+                    args.put("checksumFile", checksumFile);
+            download = new BuildCommand("downloadFile", args);
         }
 
         return new BuildCommand("compose",
-                new BuildCommand("echo", String.format("Fetching artifact [%s] from [%s]", getSrc(), jobLocatorForDisplay())),
+                BuildCommand.echo(String.format("Fetching artifact [%s] from [%s]", getSrc(), jobLocatorForDisplay())),
                 download);
     }
 

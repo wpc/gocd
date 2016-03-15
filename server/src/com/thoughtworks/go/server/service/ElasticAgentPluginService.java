@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.server.service;
 
+import com.thoughtworks.go.config.JobAgentConfig;
 import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.domain.JobInstance;
 import com.thoughtworks.go.domain.JobPlan;
@@ -106,7 +107,10 @@ public class ElasticAgentPluginService implements JobStatusListener {
     public void createAgentsFor(Collection<JobPlan> plans) {
         for (JobPlan plan : plans) {
             String environment = environmentConfigService.envForPipeline(plan.getPipelineName());
-            createAgentQueue.post(new CreateAgentMessage(serverConfigService.getAutoregisterKey(), null, environment, plan.getJobAgentConfig()));
+            JobAgentConfig jobAgentConfig = plan.getJobAgentConfig();
+            if (jobAgentConfig != null) {
+                createAgentQueue.post(new CreateAgentMessage(serverConfigService.getAutoregisterKey(), null, environment, jobAgentConfig));
+            }
         }
     }
 

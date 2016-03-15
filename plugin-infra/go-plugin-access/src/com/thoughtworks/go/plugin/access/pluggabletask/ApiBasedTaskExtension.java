@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.plugin.access.pluggabletask;
 
+import com.google.gson.Gson;
 import com.thoughtworks.go.plugin.access.common.handler.JSONResultMessageHandler;
 import com.thoughtworks.go.plugin.access.common.settings.PluginSettingsConfiguration;
 import com.thoughtworks.go.plugin.api.BuildCommand;
@@ -79,12 +80,13 @@ class ApiBasedTaskExtension implements TaskExtensionContract {
 
     @Override
     public BuildCommand taskBuildCommand(String pluginId, TaskConfig taskConfig, TaskExecutionContext taskExecutionContext) {
+        Gson gson = new Gson();
         Map config = new JSONResultMessageHandler().configurationToMap(taskConfig);
-        Map<String, Object> args = new HashMap<>();
+        Map<String, String> args = new HashMap<>();
         args.put("pluginId", pluginId);
         args.put("workingDir", taskExecutionContext.workingDir());
-        args.put("taskConfig", config);
-        args.put("environmentVariables", taskExecutionContext.environment().asMap());
+        args.put("taskConfig", gson.toJson(config));
+        args.put("environmentVariables", gson.toJson(taskExecutionContext.environment().asMap()));
         return new BuildCommand("callAPIBasedTaskExtension", args);
     }
 }

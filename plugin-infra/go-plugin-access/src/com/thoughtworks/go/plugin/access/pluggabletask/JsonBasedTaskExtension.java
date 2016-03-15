@@ -77,7 +77,7 @@ class JsonBasedTaskExtension extends AbstractExtension implements TaskExtensionC
 
         String requestBody =  handlerHashMap.get(resolvedExtensionVersion).getTaskExecutionBody(taskConfig, taskExecutionContext);
 
-        HashMap<String, Object> call = new HashMap<>();
+        HashMap<String, String> call = new HashMap<>();
         call.put("name", TASK_EXTENSION);
         call.put("pluginId", pluginId);
         call.put("requestName", EXECUTION_REQUEST);
