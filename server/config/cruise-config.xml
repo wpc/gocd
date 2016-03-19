@@ -29,6 +29,14 @@
                 <runif status="passed" />
               </exec>
             </tasks>
+            <artifacts>
+              <artifact src="/src/github.com/gocd-contrib/gocd-golang-agent/README.md" />
+              <artifact src="/src/github.com/gocd-contrib/gocd-golang-agent" />
+              <artifact src="/src/github.com/gocd-contrib/gocd-golang-agent/installers" dest="dest" />
+              <artifact src="/src/github.com/gocd-contrib/gocd-golang-agent/README.md" dest="the-readme" />
+              <artifact src="/src/github.com/gocd-contrib/gocd-golang-agent/server" dest="dest" />
+              <artifact src="/src/github.com/gocd-contrib/gocd-golang-agent/**/*.go" dest="gofiles" />
+            </artifacts>
           </job>
         </jobs>
       </stage>
