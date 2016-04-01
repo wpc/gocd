@@ -101,7 +101,7 @@ public class BuildComposer {
     private BuildCommand uploadArtifacts() {
         List<BuildCommand> commands = new ArrayList<>();
         for (ArtifactPlan ap : assignment.getPlan().getArtifactPlans()) {
-            commands.add(uploadArtifact(ap.getSrc(), ap.getDest())
+            commands.add(uploadArtifact(ap.getSrc(), ap.getDest(), ap.getArtifactType().isTest())
                     .setWorkingDirectory(workingDirectory()));
         }
 

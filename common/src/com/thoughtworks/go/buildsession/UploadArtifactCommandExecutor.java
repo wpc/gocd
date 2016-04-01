@@ -33,15 +33,18 @@ public class UploadArtifactCommandExecutor implements BuildCommandExecutor {
     public boolean execute(BuildCommand command, BuildSession buildSession) {
         final String src = command.getArgs().get("src");
         final String dest = command.getArgs().get("dest");
+        final Boolean ignoreUnmatchError = command.getBooleanArg("ignoreUnmatchError");
         final File rootPath = buildSession.resolveRelativeDir(command.getWorkingDirectory());
 
         WildcardScanner scanner = new WildcardScanner(rootPath, src);
         File[] files = scanner.getFiles();
+
         if (files.length == 0) {
             String message = "The rule [" + src + "] cannot match any resource under [" + rootPath + "]";
             buildSession.printlnWithPrefix(message);
-            return false;
+            return ignoreUnmatchError;
         }
+
         for (File file : files) {
             buildSession.upload(file, destURL(rootPath, file, src, dest));
         }

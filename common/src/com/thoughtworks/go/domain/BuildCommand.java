@@ -104,8 +104,8 @@ public class BuildCommand {
     }
 
 
-    public static BuildCommand uploadArtifact(String src, String dest) {
-        return new BuildCommand("uploadArtifact", map("src", src, "dest", dest));
+    public static BuildCommand uploadArtifact(String src, String dest, boolean ignoreUnmatchError) {
+        return new BuildCommand("uploadArtifact", map("src", src, "dest", dest, "ignoreUnmatchError", String.valueOf(ignoreUnmatchError)));
     }
 
     public static BuildCommand generateTestReport(List<String> srcs) {
@@ -308,5 +308,9 @@ public class BuildCommand {
             ret.put(String.valueOf(i), listArgs[i]);
         }
         return ret;
+    }
+
+    public boolean getBooleanArg(String arg) {
+        return args.containsKey(arg) ? Boolean.valueOf(args.get(arg)) : false;
     }
 }

@@ -37,7 +37,7 @@ public class ExportCommandExecutor implements BuildCommandExecutor {
         }
 
         String value = command.getArgs().get("value");
-        boolean secure = Boolean.valueOf(command.getArgs().get("secure"));
+        boolean secure = command.getBooleanArg("secure");
         String displayValue = secure ? EnvironmentVariableContext.EnvironmentVariable.MASK_VALUE : value;
         Set<String> processLevelEnvs = ProcessManager.getInstance().environmentVariableNames();
 

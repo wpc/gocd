@@ -19,7 +19,7 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
     public void uploadSingleFileArtifact() throws Exception {
         File targetFile = new File(sandbox, "foo");
         assertTrue(targetFile.createNewFile());
-        runBuild(uploadArtifact("foo", "foo-dest").setWorkingDirectory(sandbox.getPath()), Passed);
+        runBuild(uploadArtifact("foo", "foo-dest", false).setWorkingDirectory(sandbox.getPath()), Passed);
         assertThat(artifactsRepository.getFileUploaded().size(), is(1));
         assertThat(artifactsRepository.getFileUploaded().get(0).file, is(targetFile));
         assertThat(artifactsRepository.getFileUploaded().get(0).destPath, is("foo-dest"));
@@ -32,7 +32,7 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
         assertTrue(dir.mkdirs());
         assertTrue(new File(dir, "bar").createNewFile());
         assertTrue(new File(dir, "baz").createNewFile());
-        runBuild(uploadArtifact("foo/*", "foo-dest"), Passed);
+        runBuild(uploadArtifact("foo/*", "foo-dest", false), Passed);
         assertThat(artifactsRepository.getFileUploaded().size(), is(2));
         assertThat(artifactsRepository.getFileUploaded().get(0).file, is(new File(dir, "bar")));
         assertThat(artifactsRepository.getFileUploaded().get(1).file, is(new File(dir, "baz")));
@@ -41,7 +41,7 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
     @Test
     public void shouldUploadMatchedFolder() throws Exception {
         FileUtil.createFilesByPath(sandbox, "logs/pic/fail.png", "logs/pic/pass.png", "README");
-        runBuild(uploadArtifact("**/*", "mypic"), Passed);
+        runBuild(uploadArtifact("**/*", "mypic", false), Passed);
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic"), "mypic/logs"), is(true));
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "README"), "mypic"), is(true));
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic/fail.png"), "mypic/logs/pic"), is(false));
@@ -51,7 +51,7 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
     @Test
     public void shouldNotUploadFileContainingFolderAgain() throws Exception {
         FileUtil.createFilesByPath(sandbox, "logs/pic/fail.png", "logs/pic/pass.png", "README");
-        runBuild(uploadArtifact("logs/pic/*.png", "mypic"), Passed);
+        runBuild(uploadArtifact("logs/pic/*.png", "mypic", false), Passed);
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic/pass.png"), "mypic"), is(true));
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic/fail.png"), "mypic"), is(true));
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic"), "mypic"), is(false));
@@ -60,7 +60,7 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
     @Test
     public void shouldUploadFolderWhenMatchedWithWildCards() throws Exception {
         FileUtil.createFilesByPath(sandbox, "logs/pic-1/fail.png", "logs/pic-1/pass.png", "logs/pic-2/cancel.png", "logs/pic-2/complete.png", "README");
-        runBuild(uploadArtifact("logs/pic-*", "mypic"), Passed);
+        runBuild(uploadArtifact("logs/pic-*", "mypic", false), Passed);
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic-1/pass.png"), "mypic"), is(false));
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic-1/fail.png"), "mypic"), is(false));
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic-2/cancel.png"), "mypic"), is(false));
@@ -72,7 +72,7 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
     @Test
     public void shouldUploadFolderWhenDirectMatch() throws Exception {
         FileUtil.createFilesByPath(sandbox, "logs/pic-1/fail.png", "logs/pic-1/pass.png", "logs/pic-2/cancel.png", "logs/pic-2/complete.png", "README");
-        runBuild(uploadArtifact("logs/pic-1", "mypic"), Passed);
+        runBuild(uploadArtifact("logs/pic-1", "mypic", false), Passed);
         assertThat(artifactsRepository.isFileUploaded(new File(sandbox, "logs/pic-1"), "mypic"), is(true));
     }
 
@@ -80,7 +80,7 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
     public void shouldFailBuildWhenNothingMatched() throws Exception {
         FileUtil.createFilesByPath(sandbox, "logs/pic-1/fail.png", "logs/pic-1/pass.png", "logs/pic-2/cancel.png", "logs/pic-2/complete.png", "README");
 
-        runBuild(uploadArtifact("logs/picture", "mypic"), Failed);
+        runBuild(uploadArtifact("logs/picture", "mypic", false), Failed);
         assertThat(artifactsRepository.getFileUploaded().size(), is(0));
         assertThat(console.output(), printedRuleDoesNotMatchFailure(sandbox.getPath(), "logs/picture"));
     }
@@ -88,13 +88,19 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
     @Test
     public void shouldFailBuildWhenSourceDirectoryDoesNotExist() throws Exception {
         FileUtil.createFilesByPath(sandbox, "logs/pic-1/fail.png", "logs/pic-1/pass.png", "logs/pic-2/cancel.png", "logs/pic-2/complete.png", "README");
-        runBuild(uploadArtifact("not-Exist-Folder", "mypic"), Failed);
+        runBuild(uploadArtifact("not-Exist-Folder", "mypic", false), Failed);
         assertThat(console.output(), printedRuleDoesNotMatchFailure(sandbox.getPath(), "not-Exist-Folder"));
     }
 
     @Test
     public void shouldFailBuildWhenNothingMatchedUsingMatcherStartDotStart() throws Exception {
-        runBuild(uploadArtifact("target/pkg/*.*", "MYDEST"), Failed);
+        runBuild(uploadArtifact("target/pkg/*.*", "MYDEST", false), Failed);
+        assertThat(console.output(), printedRuleDoesNotMatchFailure(sandbox.getPath(), "target/pkg/*.*"));
+    }
+
+    @Test
+    public void shouldNotFailBuildWhenNothingMatchedWhenIngnoreUnmatchError() throws Exception {
+        runBuild(uploadArtifact("target/pkg/*.*", "MYDEST", true), Passed);
         assertThat(console.output(), printedRuleDoesNotMatchFailure(sandbox.getPath(), "target/pkg/*.*"));
     }
 
@@ -102,7 +108,15 @@ public class UploadArtifactCommandExecutorTest extends BuildSessionBasedTestCase
     public void shouldFailBuildWhenUploadErrorHappened() throws Exception {
         FileUtil.createFilesByPath(sandbox, "logs/pic/pass.png", "logs/pic-1/pass.png");
         artifactsRepository.setUploadError(new RuntimeException("upload failed!!"));
-        runBuild(uploadArtifact("**/*.png", "mypic"), Failed);
+        runBuild(uploadArtifact("**/*.png", "mypic", false), Failed);
+        assertThat(artifactsRepository.getFileUploaded().size(), is(0));
+    }
+
+    @Test
+    public void shouldStillFailBuildWhenIgnoreUnmatchErrorButUploadErrorHappened() throws Exception {
+        FileUtil.createFilesByPath(sandbox, "logs/pic/pass.png", "logs/pic-1/pass.png");
+        artifactsRepository.setUploadError(new RuntimeException("upload failed!!"));
+        runBuild(uploadArtifact("**/*.png", "mypic", true), Failed);
         assertThat(artifactsRepository.getFileUploaded().size(), is(0));
     }
 
