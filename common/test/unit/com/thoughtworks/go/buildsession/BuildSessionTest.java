@@ -208,7 +208,7 @@ public class BuildSessionTest extends BuildSessionBasedTest {
     public void testDirectoryExistsBeforeMkdir() {
         File dir = new File(sandbox, "foo");
         runBuild(mkdirs("foo"), Passed);
-        runBuild(mkdirs("foo").setTest(test("-d", dir.getPath()), false), Passed);
+        runBuild(mkdirs("foo").setTest(test("-nd", dir.getPath())), Passed);
         assertThat(new File(sandbox, "foo").isDirectory(), is(true));
     }
 
@@ -221,21 +221,19 @@ public class BuildSessionTest extends BuildSessionBasedTest {
 
     @Test
     public void shouldNotFailBuildWhenTestCommandFail() {
-        runBuild(echo("foo").setTest(fail(""), false), Passed);
+        runBuild(echo("foo").setTest(fail("")), Passed);
         assertThat(statusReporter.singleResult(), is(Passed));
-        assertThat(console.output(), containsString("foo"));
     }
 
     @Test
     public void shouldNotFailBuildWhenComposedTestCommandFail() {
-        runBuild(echo("foo").setTest(compose(echo(""), fail("")), false), Passed);
+        runBuild(echo("foo").setTest(compose(echo(""), fail(""))), Passed);
         assertThat(statusReporter.singleResult(), is(JobResult.Passed));
-        assertThat(console.output(), containsString("foo"));
     }
 
     @Test
     public void shouldNotFailBuildWhenTestEqWithComposedCommandOutputFail() {
-        runBuild(echo("foo").setTest(test("-eq", "42", compose(fail("42"))), true), Passed);
+        runBuild(echo("foo").setTest(test("-eq", "42", compose(fail("42")))), Passed);
         assertThat(statusReporter.singleResult(), is(Passed));
         assertThat(console.output(), containsString("foo"));
     }
@@ -301,6 +299,17 @@ public class BuildSessionTest extends BuildSessionBasedTest {
     }
 
     @Test
+    public void testDirNotExists() throws IOException {
+        runBuild(test("-nd", ""), Failed);
+        runBuild(test("-nd", "dir"), Passed);
+        runBuild(test("-nd", "file"), Passed);
+        assertTrue(new File(sandbox, "file").createNewFile());
+        assertTrue(new File(sandbox, "dir").mkdir());
+        runBuild(test("-nd", "file"), Passed);
+        runBuild(test("-nd", "dir"), Failed);
+    }
+
+    @Test
     public void testFileExists() throws IOException {
         runBuild(test("-f", ""), Failed);
         runBuild(test("-f", "file"), Failed);
@@ -310,8 +319,25 @@ public class BuildSessionTest extends BuildSessionBasedTest {
     }
 
     @Test
+    public void testFileNotExists() throws IOException {
+        runBuild(test("-nf", ""), Passed);
+        runBuild(test("-nf", "file"), Passed);
+        File file = new File(sandbox, "file");
+        assertTrue(file.createNewFile());
+        runBuild(test("-nf", "file"), Failed);
+    }
+
+    @Test
     public void testEqWithCommandOutput() throws IOException {
         runBuild(test("-eq", "foo", echo("foo")), Passed);
+        runBuild(test("-eq", "bar", echo("foo")), Failed);
+        assertThat(console.lineCount(), is(0));
+    }
+
+    @Test
+    public void testNotEqWithCommandOutput() throws IOException {
+        runBuild(test("-neq", "foo", echo("foo")), Failed);
+        runBuild(test("-neq", "bar", echo("foo")), Passed);
         assertThat(console.lineCount(), is(0));
     }
 
@@ -426,9 +452,7 @@ public class BuildSessionTest extends BuildSessionBasedTest {
             @Override
             public void run() {
                 buildSession.build(compose(
-                        echo("after sleep").setTest(compose(
-                                execSleepScript(50),
-                                fail("")), false)));
+                        echo("after sleep").setTest(execSleepScript(50))));
             }
         });
         try {

@@ -77,7 +77,7 @@ public class GitMaterialUpdater {
                 exec("git", "submodule", "update"),
                 echo("[GIT] Git sub-module status"),
                 exec("git", "submodule", "status"))
-                .setTest(hasSubmodules(workingDir), true)
+                .setTest(hasSubmodules(workingDir))
                 .setWorkingDirectoryRecursively(workingDir);
     }
 
@@ -90,7 +90,7 @@ public class GitMaterialUpdater {
         return compose(
                 echo("[GIT] Cleaning all unversioned files in working copy"),
                 exec("git", "submodule", "foreach", "--recursive", "git", "clean", "-fdd")
-                        .setTest(hasSubmodules(workingDir), true),
+                        .setTest(hasSubmodules(workingDir)),
                 exec("git", "clean", "-dff"))
                 .setWorkingDirectoryRecursively(workingDir);
     }
@@ -109,12 +109,13 @@ public class GitMaterialUpdater {
                         echo(format("[GIT] Unshallowing repository with depth %d", depth)),
                         exec("git", "fetch", "origin", format("--depth=%d", depth)).setWorkingDirectory(workingDir),
                         unshallowIfNeeded(workingDir, revision, Arrays.copyOfRange(steps, 1, steps.length))
-                ).setTest(includeRevision(workingDir, revision), false)
-        ).setTest(isShallow(workingDir), true);
+                ).setTest(revisionNotExists(workingDir, revision))
+        ).setTest(isShallow(workingDir));
     }
 
-    private BuildCommand includeRevision(String workingDir, Revision revision) {
-        return exec("git", "cat-file", "-t", revision.getRevision()).setWorkingDirectory(workingDir);
+    private BuildCommand revisionNotExists(String workingDir, Revision revision) {
+        return test("-neq", "commit",
+                exec("git", "cat-file", "-t", revision.getRevision()).setWorkingDirectory(workingDir));
     }
 
     private BuildCommand isShallow(String workingDir) {
@@ -123,30 +124,30 @@ public class GitMaterialUpdater {
 
     private BuildCommand cloneIfNeeded(String workDir, int cloneDepth) {
         return compose(
-                mkdirs(workDir).setTest(test("-d", workDir), false),
+                mkdirs(workDir).setTest(test("-nd", workDir)),
                 cleanWorkingDir(workDir),
                 cmdClone(workDir, cloneDepth));
     }
 
     private BuildCommand cleanWorkingDir(String workDir) {
         return compose(
-                cleandir(workDir).setTest(isRepository(workDir), false),
-                cleandir(workDir).setTest(isRepoUrlSame(workDir), false),
-                cleandir(workDir).setTest(isBranchSame(workDir), false),
-                material.isShallowClone() ? noop() : cleandir(workDir).setTest(isShallow(workDir), true)
-        ).setTest(test("-d", workDir), true);
+                cleandir(workDir).setTest(isNotRepository(workDir)),
+                cleandir(workDir).setTest(isRepoUrlChanged(workDir)),
+                cleandir(workDir).setTest(isBranchChanged(workDir)),
+                material.isShallowClone() ? noop() : cleandir(workDir).setTest(isShallow(workDir))
+        ).setTest(test("-d", workDir));
     }
 
-    private BuildCommand isRepoUrlSame(String workDir) {
-        return test("-eq",
-                material.branchWithDefault(),
-                exec("git", "rev-parse", "--abbrev-ref", "HEAD").setWorkingDirectory(workDir));
-    }
-
-    private BuildCommand isBranchSame(String workDir) {
-        return test("-eq",
+    private BuildCommand isRepoUrlChanged(String workDir) {
+        return test("-neq",
                 material.getUrlArgument().forCommandline(),
                 exec("git", "config", "remote.origin.url").setWorkingDirectory(workDir));
+    }
+
+    private BuildCommand isBranchChanged(String workDir) {
+        return test("-neq",
+                material.branchWithDefault(),
+                exec("git", "rev-parse", "--abbrev-ref", "HEAD").setWorkingDirectory(workDir));
     }
 
 
@@ -161,10 +162,10 @@ public class GitMaterialUpdater {
         cloneArgs.add(material.getUrlArgument().forCommandline());
         cloneArgs.add(workDir);
         return exec("git", cloneArgs.toArray(new String[cloneArgs.size()]))
-                .setTest(isRepository(workDir), false);
+                .setTest(isNotRepository(workDir));
     }
 
-    private BuildCommand isRepository(String workDir) {
-        return test("-d", new File(workDir, ".git").getPath());
+    private BuildCommand isNotRepository(String workDir) {
+        return test("-nd", new File(workDir, ".git").getPath());
     }
 }

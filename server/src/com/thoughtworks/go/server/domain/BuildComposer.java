@@ -162,7 +162,7 @@ public class BuildComposer {
     private BuildCommand refreshWorkingDir() {
         return BuildCommand.compose(
                 cleanWorkingDir(),
-                mkdirs(workingDirectory()).setTest(test("-d", workingDirectory()), false));
+                mkdirs(workingDirectory()).setTest(test("-nd", workingDirectory())));
     }
 
     private BuildCommand cleanWorkingDir() {
@@ -172,7 +172,7 @@ public class BuildComposer {
         return BuildCommand.compose(
                 cleandir(workingDirectory()),
                 echoWithPrefix("Cleaning working directory \"$%s\" since stage is configured to clean working directory", workingDirectory())
-        ).setTest(test("-d", workingDirectory()), true);
+        ).setTest(test("-d", workingDirectory()));
     }
 
     private String workingDirectory() {

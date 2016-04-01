@@ -167,9 +167,9 @@ public class BuildSession {
                 return true;
             }
 
-            BuildCommand.Test test = command.getTest();
+            BuildCommand test = command.getTest();
             if (test != null) {
-                if (newTestingSession(console).processCommand(test.command) != test.expectation) {
+                if (!newTestingSession(console).processCommand(test)) {
                     return true;
                 }
             }

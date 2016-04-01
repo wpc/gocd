@@ -28,23 +28,39 @@ public class TestCommandExecutor implements BuildCommandExecutor {
 
         String flag = command.getArgs().get("flag");
         String left = command.getArgs().get("left");
+
+        if ("-eq".equals(flag)) {
+            return left.equals(captureSubCommandOutput(command, buildSession));
+        }
+
+        if ("-neq".equals(flag)) {
+            return !left.equals(captureSubCommandOutput(command, buildSession));
+        }
+
+        File target = buildSession.resolveRelativeDir(command.getWorkingDirectory(), left);
         if ("-d".equals(flag)) {
-            File target = buildSession.resolveRelativeDir(command.getWorkingDirectory(), left);
             return target.isDirectory();
         }
 
+        if ("-nd".equals(flag)) {
+            return !target.isDirectory();
+        }
+
         if ("-f".equals(flag)) {
-            File target = buildSession.resolveRelativeDir(command.getWorkingDirectory(), left);
             return target.isFile();
         }
 
-        if ("-eq".equals(flag)) {
-            ConsoleCapture consoleCapture = new ConsoleCapture();
-            BuildCommand targetCommand = command.getSubCommands().get(0);
-            buildSession.newTestingSession(consoleCapture).processCommand(targetCommand);
-            return left.equals(consoleCapture.captured());
+        if ("-nf".equals(flag)) {
+            return !target.isFile();
         }
 
         throw bomb(format("Unknown flag %s for command: %s", flag, command));
+    }
+
+    private String captureSubCommandOutput(BuildCommand command, BuildSession buildSession) {
+        BuildCommand targetCommand = command.getSubCommands().get(0);
+        ConsoleCapture consoleCapture = new ConsoleCapture();
+        buildSession.newTestingSession(consoleCapture).processCommand(targetCommand);
+        return consoleCapture.captured();
     }
 }

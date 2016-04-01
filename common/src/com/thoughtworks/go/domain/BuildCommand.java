@@ -120,46 +120,6 @@ public class BuildCommand {
         return new BuildCommand("downloadDir", args);
     }
 
-    public static class Test {
-        @Expose
-        public final BuildCommand command;
-        @Expose
-        public final Boolean expectation;
-
-        public Test(BuildCommand command, Boolean expectation) {
-            this.command = command;
-            this.expectation = expectation;
-        }
-
-        @Override
-        public String toString() {
-            return "Test{" +
-                    "command=" + command +
-                    ", expectation=" + expectation +
-                    '}';
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            Test test = (Test) o;
-
-            if (command != null ? !command.equals(test.command) : test.command != null) return false;
-            return expectation != null ? expectation.equals(test.expectation) : test.expectation == null;
-
-        }
-
-        @Override
-        public int hashCode() {
-            int result = command != null ? command.hashCode() : 0;
-            result = 31 * result + (expectation != null ? expectation.hashCode() : 0);
-            return result;
-        }
-    }
-
-
     @Expose
     private final String name;
     @Expose
@@ -169,7 +129,7 @@ public class BuildCommand {
     @Expose
     private String workingDirectory;
     @Expose
-    private Test test;
+    private BuildCommand test;
     @Expose
     private String runIfConfig = "passed";
     @Expose
@@ -294,12 +254,12 @@ public class BuildCommand {
         return workingDirectory == null ? "" : workingDirectory;
     }
 
-    public Test getTest() {
+    public BuildCommand getTest() {
         return test;
     }
 
-    public BuildCommand setTest(BuildCommand command, boolean expectation) {
-        this.test = new Test(command, expectation);
+    public BuildCommand setTest(BuildCommand test) {
+        this.test = test;
         return this;
     }
 
