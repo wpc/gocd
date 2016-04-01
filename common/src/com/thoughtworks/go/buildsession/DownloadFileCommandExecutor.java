@@ -33,19 +33,19 @@ public class DownloadFileCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
         URLService urlService = new URLService();
-        String url = urlService.prefixPartialUrl(command.getArgs().get("url"));
-        String dest = command.getArgs().get("dest");
-        String src = command.getArgs().get("src");
+        String url = urlService.prefixPartialUrl(command.getStringArg("url"));
+        String dest = command.getStringArg("dest");
+        String src = command.getStringArg("src");
         File artifact = buildSession.resolveRelativeDir(command.getWorkingDirectory(), dest);
         FileHandler handler = new FileHandler(artifact, src);
         String checksumUrl = null;
         ChecksumFileHandler checksumFileHandler = null;
 
-        if (command.getArgs().containsKey("checksumUrl")) {
-            checksumUrl = new URLService().prefixPartialUrl(command.getArgs().get("checksumUrl"));
+        if (command.hasArg("checksumUrl")) {
+            checksumUrl = new URLService().prefixPartialUrl(command.getStringArg("checksumUrl"));
             File checksumFile;
-            if (command.getArgs().containsKey("checksumFile")) {
-                checksumFile = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getArgs().get("checksumFile"));
+            if (command.hasArg("checksumFile")) {
+                checksumFile = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getStringArg("checksumFile"));
             } else {
                 checksumFile = TempFiles.createUniqueFile("checksum");
             }

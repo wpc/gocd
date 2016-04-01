@@ -24,7 +24,7 @@ import static com.thoughtworks.go.util.FileUtil.applyBaseDirIfRelative;
 public class MkdirsCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        File dir = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getArgs().get("path"));
+        File dir = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getStringArg("path"));
         return dir.mkdirs();
     }
 }

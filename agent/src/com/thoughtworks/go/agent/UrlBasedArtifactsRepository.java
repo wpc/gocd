@@ -16,6 +16,8 @@
 package com.thoughtworks.go.agent;
 
 import com.thoughtworks.go.buildsession.ArtifactsRepository;
+import com.thoughtworks.go.domain.Property;
+import com.thoughtworks.go.domain.exception.ArtifactPublishingException;
 import com.thoughtworks.go.util.*;
 import com.thoughtworks.go.util.command.StreamConsumer;
 import org.apache.commons.io.FileUtils;
@@ -42,11 +44,13 @@ public class UrlBasedArtifactsRepository implements ArtifactsRepository {
 
     private final HttpService httpService;
     private final String artifactsBaseUrl;
+    private String propertyBaseUrl;
     private ZipUtil zipUtil;
 
-    public UrlBasedArtifactsRepository(HttpService httpService, String artifactsBaseUrl, ZipUtil zipUtil) {
+    public UrlBasedArtifactsRepository(HttpService httpService, String artifactsBaseUrl, String propertyBaseUrl, ZipUtil zipUtil) {
         this.httpService = httpService;
         this.artifactsBaseUrl = artifactsBaseUrl;
+        this.propertyBaseUrl = propertyBaseUrl;
         this.zipUtil = zipUtil;
     }
 
@@ -108,6 +112,19 @@ public class UrlBasedArtifactsRepository implements ArtifactsRepository {
         if (lastException != null) {
             throw new RuntimeException(lastException);
         }
+    }
+
+    @Override
+    public void setProperty(Property property) {
+        try {
+            httpService.postProperty(getPropertiesUrl(property.getKey()), property.getValue());
+        } catch (Exception e) {
+            throw new ArtifactPublishingException(format("Failed to set property %s with value %s", property.getKey(), property.getValue()), e);
+        }
+    }
+
+    private String getPropertiesUrl(String propertyName) {
+        return String.format("%s/%s", propertyBaseUrl, UrlUtil.encodeInUtf8(propertyName));
     }
 
     private void consumeLineWithPrefix(StreamConsumer console, String message) {
@@ -177,6 +194,4 @@ public class UrlBasedArtifactsRepository implements ArtifactsRepository {
     private String removeLeadingSlash(File artifactDest) {
         return removeStart(normalizePath(artifactDest.getPath()), "/");
     }
-
-
 }

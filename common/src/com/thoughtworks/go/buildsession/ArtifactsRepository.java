@@ -15,10 +15,12 @@
  * ************************GO-LICENSE-END***********************************/
 package com.thoughtworks.go.buildsession;
 
+import com.thoughtworks.go.domain.Property;
 import com.thoughtworks.go.util.command.StreamConsumer;
 
 import java.io.File;
 
 public interface ArtifactsRepository {
     void upload(StreamConsumer console, File file, String destPath, String buildId);
+    void setProperty(Property property);
 }

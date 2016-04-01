@@ -27,6 +27,7 @@ import java.util.List;
 public class ArtifactsRepositoryStub implements ArtifactsRepository {
 
     private final List<FileUpload> fileUploaded;
+    private final Properties properties;
     private RuntimeException error;
 
     public static class FileUpload {
@@ -46,6 +47,7 @@ public class ArtifactsRepositoryStub implements ArtifactsRepository {
 
     public ArtifactsRepositoryStub() {
         fileUploaded = Collections.synchronizedList(new ArrayList<FileUpload>());
+        this.properties = new Properties();
     }
 
     @Override
@@ -59,6 +61,16 @@ public class ArtifactsRepositoryStub implements ArtifactsRepository {
         fu.buildId = buildId;
         fileUploaded.add(fu);
     }
+
+    @Override
+    public void setProperty(Property property) {
+        this.properties.add(property);
+    }
+
+    public String propertyValue(String name) {
+        return properties.getValue(name);
+    }
+
 
     public List<FileUpload> getFileUploaded() {
         return fileUploaded;

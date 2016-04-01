@@ -26,8 +26,8 @@ public class TestCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
 
-        String flag = command.getArgs().get("flag");
-        String left = command.getArgs().get("left");
+        String flag = command.getStringArg("flag");
+        String left = command.getStringArg("left");
 
         if ("-eq".equals(flag)) {
             return left.equals(captureSubCommandOutput(command, buildSession));

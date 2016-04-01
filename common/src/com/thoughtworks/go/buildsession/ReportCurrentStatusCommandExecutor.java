@@ -20,7 +20,7 @@ import com.thoughtworks.go.domain.BuildCommand;
 public class ReportCurrentStatusCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        buildSession.reportBuildStatus(command.getArgs().get("status"));
+        buildSession.reportBuildStatus(command.getStringArg("status"));
         return true;
     }
 }

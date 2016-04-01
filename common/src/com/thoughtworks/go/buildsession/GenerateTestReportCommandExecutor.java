@@ -15,6 +15,7 @@
  * ************************GO-LICENSE-END***********************************/
 package com.thoughtworks.go.buildsession;
 
+import com.google.gson.Gson;
 import com.thoughtworks.go.domain.BuildCommand;
 import com.thoughtworks.go.domain.UnitTestReportGenerator;
 import com.thoughtworks.go.domain.WildcardScanner;
@@ -34,9 +35,9 @@ public class GenerateTestReportCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
         File workingDirectory = buildSession.resolveRelativeDir(command.getWorkingDirectory());
-        String[] sources = command.getListArgs();
+        String uploadPath = command.getStringArg("uploadPath");
+        String[] sources = command.getJsonArg("srcs", String[].class, new String[]{});
         ArrayList<File> allFiles = findMatchedSourceFiles(buildSession, workingDirectory, sources);
-
         if (allFiles.size() > 0) {
             File tempFolder = null;
             try {
@@ -44,7 +45,7 @@ public class GenerateTestReportCommandExecutor implements BuildCommandExecutor {
                 File testResultSource = new File(tempFolder, "result");
                 testResultSource.mkdirs();
                 UnitTestReportGenerator generator = new UnitTestReportGenerator(buildSession.getPublisher(), testResultSource);
-                generator.generate(allFiles.toArray(new File[allFiles.size()]));
+                generator.generate(allFiles.toArray(new File[allFiles.size()]), uploadPath);
             } finally {
                 if (tempFolder != null) {
                     FileUtil.deleteFolder(tempFolder);

@@ -31,8 +31,8 @@ import static org.apache.commons.lang.StringUtils.removeStart;
 public class UploadArtifactCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        final String src = command.getArgs().get("src");
-        final String dest = command.getArgs().get("dest");
+        final String src = command.getStringArg("src");
+        final String dest = command.getStringArg("dest");
         final Boolean ignoreUnmatchError = command.getBooleanArg("ignoreUnmatchError");
         final File rootPath = buildSession.resolveRelativeDir(command.getWorkingDirectory());
 

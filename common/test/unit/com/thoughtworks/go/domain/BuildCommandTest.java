@@ -30,6 +30,9 @@ public class BuildCommandTest {
         assertThat(new BuildCommand("foo").getArgs().size(), is(0));
         assertThat(new BuildCommand("foo", "arg1", "arg2").getArgs(), is(map("0", "arg1", "1", "arg2")));
         assertThat(new BuildCommand("foo", "arg1", "arg2").getListArgs(), is(new String[]{"arg1","arg2"}));
+        assertThat(new BuildCommand("foo", map("foo", "true")).getBooleanArg("foo"), is(true));
+        assertThat(new BuildCommand("foo", map("foo", "true")).getBooleanArg("bar"), is(false));
+        assertThat(new BuildCommand("foo", map("foo", "bar")).getStringArg("foo"), is("bar"));
     }
 
 

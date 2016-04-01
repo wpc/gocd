@@ -27,16 +27,16 @@ import static java.lang.String.format;
 public class ExportCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        String name = command.getArgs().get("name");
+        String name = command.getStringArg("name");
 
-        if (!command.getArgs().containsKey("value")) {
+        if (!command.hasArg("value")) {
             String displayValue = buildSession.getEnvs().get(name);
             buildSession.printlnSafely(format("[%s] setting environment variable '%s' to value '%s'",
                     GoConstants.PRODUCT_NAME, name, displayValue));
             return true;
         }
 
-        String value = command.getArgs().get("value");
+        String value = command.getStringArg("value");
         boolean secure = command.getBooleanArg("secure");
         String displayValue = secure ? EnvironmentVariableContext.EnvironmentVariable.MASK_VALUE : value;
         Set<String> processLevelEnvs = ProcessManager.getInstance().environmentVariableNames();

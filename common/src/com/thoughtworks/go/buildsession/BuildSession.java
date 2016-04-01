@@ -61,7 +61,7 @@ public class BuildSession {
         executors.put("downloadDir", new DownloadDirCommandExecutor());
         executors.put("downloadFile", new DownloadFileCommandExecutor());
         executors.put("uploadArtifact", new UploadArtifactCommandExecutor());
-        executors.put("secret", new SecretCommandExectutor());
+        executors.put("secret", new SecretCommandExecutor());
         executors.put("export", new ExportCommandExecutor());
         executors.put("compose", new ComposeCommandExecutor());
         executors.put("fail", new FailCommandExecutor());

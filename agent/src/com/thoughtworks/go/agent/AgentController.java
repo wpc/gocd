@@ -327,6 +327,7 @@ public class AgentController {
         ArtifactsRepository artifactsRepository = new UrlBasedArtifactsRepository(
                 httpService,
                 urlService.prefixPartialUrl(buildSettings.getArtifactUploadBaseUrl()),
+                urlService.prefixPartialUrl(buildSettings.getPropertyBaseUrl()),
                 new ZipUtil());
 
         DefaultBuildStateReporter buildStateReporter = new DefaultBuildStateReporter(websocketService, agentRuntimeInfo);

@@ -16,12 +16,14 @@
 package com.thoughtworks.go.agent;
 
 import com.thoughtworks.go.buildsession.ArtifactsRepository;
+import com.thoughtworks.go.domain.Property;
 import com.thoughtworks.go.util.*;
 import com.thoughtworks.go.util.command.InMemoryConsumer;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
@@ -51,7 +53,7 @@ public class UrlBasedArtifactsRepositoryTest {
         artifactFolder = TestFileUtil.createTempFolder("artifact_folder");
         tempFile = TestFileUtil.createTestFile(artifactFolder, "file.txt");
         console = new InMemoryConsumer();
-        artifactsRepository = new UrlBasedArtifactsRepository(httpService, "http://baseurl", new ZipUtil());
+        artifactsRepository = new UrlBasedArtifactsRepository(httpService, "http://baseurl/artifacts", "http://baseurl/properties", new ZipUtil());
     }
 
     @After
@@ -81,7 +83,7 @@ public class UrlBasedArtifactsRepositoryTest {
             artifactsRepository.upload(console, tempFile, "dest", "build42");
             fail("should have thrown request entity too large error");
         } catch (RuntimeException e) {
-            verify(httpService).upload(eq("http://baseurl/dest?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), any(Properties.class));
+            verify(httpService).upload(eq("http://baseurl/artifacts/dest?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), any(Properties.class));
         }
     }
 
@@ -94,9 +96,9 @@ public class UrlBasedArtifactsRepositoryTest {
         Properties properties = new Properties();
         properties.setProperty("dest/path/file.txt", md5);
 
-        when(httpService.upload(eq("http://baseurl/dest/path?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
-        when(httpService.upload(eq("http://baseurl/dest/path?attempt=2&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
-        when(httpService.upload(eq("http://baseurl/dest/path?attempt=3&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_OK);
+        when(httpService.upload(eq("http://baseurl/artifacts/dest/path?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
+        when(httpService.upload(eq("http://baseurl/artifacts/dest/path?attempt=2&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
+        when(httpService.upload(eq("http://baseurl/artifacts/dest/path?attempt=3&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_OK);
         artifactsRepository.upload(console, tempFile, "dest/path", "build42");
     }
 
@@ -108,9 +110,9 @@ public class UrlBasedArtifactsRepositoryTest {
         Properties properties = new Properties();
         properties.setProperty("dest/path/file.txt", md5);
 
-        when(httpService.upload(eq("http://baseurl/dest/path?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
-        when(httpService.upload(eq("http://baseurl/dest/path?attempt=2&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
-        when(httpService.upload(eq("http://baseurl/dest/path?attempt=3&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
+        when(httpService.upload(eq("http://baseurl/artifacts/dest/path?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
+        when(httpService.upload(eq("http://baseurl/artifacts/dest/path?attempt=2&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
+        when(httpService.upload(eq("http://baseurl/artifacts/dest/path?attempt=3&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_BAD_GATEWAY);
 
         try {
             artifactsRepository.upload(console, tempFile, "dest/path", "build42");
@@ -129,7 +131,7 @@ public class UrlBasedArtifactsRepositoryTest {
         Properties properties = new Properties();
         properties.setProperty("dest/path/file.txt", md5);
 
-        when(httpService.upload(eq("http://baseurl/dest/path?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_OK);
+        when(httpService.upload(eq("http://baseurl/artifacts/dest/path?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_OK);
 
         artifactsRepository.upload(console, tempFile, "dest/path", "build42");
     }
@@ -142,7 +144,7 @@ public class UrlBasedArtifactsRepositoryTest {
         Properties properties = new Properties();
         properties.setProperty("file.txt", md5);
 
-        when(httpService.upload(eq("http://baseurl/?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_OK);
+        when(httpService.upload(eq("http://baseurl/artifacts/?attempt=1&buildId=build42"), eq(tempFile.length()), any(File.class), eq(properties))).thenReturn(HttpServletResponse.SC_OK);
 
         artifactsRepository.upload(console, tempFile, "", "build42");
     }
@@ -158,8 +160,19 @@ public class UrlBasedArtifactsRepositoryTest {
         FileUtils.writeStringToFile(anotherFile, secondData);
 
 
-        when(httpService.upload(eq("http://baseurl/dest?attempt=1&buildId=build42"), eq(FileUtils.sizeOfDirectory(artifactFolder)), any(File.class), eq(expectedProperties(data, secondData)))).thenReturn(HttpServletResponse.SC_OK);
+        when(httpService.upload(eq("http://baseurl/artifacts/dest?attempt=1&buildId=build42"), eq(FileUtils.sizeOfDirectory(artifactFolder)), any(File.class), eq(expectedProperties(data, secondData)))).thenReturn(HttpServletResponse.SC_OK);
         artifactsRepository.upload(console, artifactFolder, "dest", "build42");
+    }
+
+    @Test
+    public void setRemoteBuildPropertyShouldEncodePropertyName() throws IOException {
+        ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> value = ArgumentCaptor.forClass(String.class);
+
+        artifactsRepository.setProperty(new Property("fo,o", "bar"));
+        verify(httpService).postProperty(url.capture(), value.capture());
+        assertThat(value.getValue(), is("bar"));
+        assertThat(url.getValue(), is("http://baseurl/properties/fo%2Co"));
     }
 
     private Properties expectedProperties(String data, String secondData) {

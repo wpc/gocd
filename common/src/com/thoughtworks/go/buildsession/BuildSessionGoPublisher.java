@@ -48,7 +48,7 @@ class BuildSessionGoPublisher implements GoPublisher {
 
     @Override
     public void setProperty(Property property) {
-
+        artifactsRepository.setProperty(property);
     }
 
     @Override

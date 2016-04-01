@@ -118,7 +118,7 @@ public class BuildComposer {
                 srcs.add(ap.getSrc());
             }
         }
-        return BuildCommand.generateTestReport(srcs);
+        return srcs.isEmpty() ? noop() : BuildCommand.generateTestReport(srcs, "testoutput");
     }
 
 
@@ -140,7 +140,6 @@ public class BuildComposer {
         }
         return BuildCommand.compose(commands);
     }
-
 
     private BuildCommand reportAction(String action) {
         return echoWithPrefix("%s %s on ${agent.hostname} [${agent.location}]", action, getJobIdentifier().buildLocatorForDisplay());

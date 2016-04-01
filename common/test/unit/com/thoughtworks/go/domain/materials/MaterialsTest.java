@@ -41,6 +41,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static com.thoughtworks.go.domain.BuildCommand.noop;
 import static com.thoughtworks.go.junitext.EnhancedOSChecker.DO_NOT_RUN_ON;
@@ -292,8 +293,8 @@ public class MaterialsTest {
 
         BuildCommand command = materials.cleanUpCommand("basedir");
         assertThat(command.getName(), is("cleandir"));
-        assertThat(command.getArgs().get("path"), is("basedir"));
-        assertThat(command.getArgs().get("allowed"), is(new Gson().toJson(Arrays.asList("some-folder", "cruise-output"))));
+        assertThat(command.getStringArg("path"), is("basedir"));
+        assertThat(command.getJsonArg("allowed", String[].class, null), is(new String[]{"some-folder", "cruise-output"}));
     }
 
     @Test

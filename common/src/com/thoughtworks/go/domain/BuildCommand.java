@@ -26,7 +26,7 @@ import static com.thoughtworks.go.util.MapBuilder.map;
 
 public class BuildCommand {
 
-    public static final Gson GSON = new Gson();
+    private static final Gson GSON = new Gson();
 
     public static BuildCommand echoWithPrefix(String format, String...args) {
         String prefix = String.format("[%s] ", GoConstants.PRODUCT_NAME);
@@ -108,8 +108,10 @@ public class BuildCommand {
         return new BuildCommand("uploadArtifact", map("src", src, "dest", dest, "ignoreUnmatchError", String.valueOf(ignoreUnmatchError)));
     }
 
-    public static BuildCommand generateTestReport(List<String> srcs) {
-        return new BuildCommand("generateTestReport", srcs.toArray(new String[srcs.size()]));
+    public static BuildCommand generateTestReport(List<String> srcs, String uploadPath) {
+        return new BuildCommand("generateTestReport", map(
+                "uploadPath", uploadPath,
+                "srcs", GSON.toJson(srcs)));
     }
 
     public static BuildCommand downloadFile(Map<String, String> args) {
@@ -157,6 +159,10 @@ public class BuildCommand {
 
     public Map<String, String> getArgs() {
         return args;
+    }
+
+    public boolean hasArg(String arg) {
+        return args.containsKey(arg);
     }
 
     public String[] getListArgs() {
@@ -312,5 +318,17 @@ public class BuildCommand {
 
     public boolean getBooleanArg(String arg) {
         return args.containsKey(arg) ? Boolean.valueOf(args.get(arg)) : false;
+    }
+
+    public String getStringArg(String arg) {
+        return args.get(arg);
+    }
+
+    public <T> T getJsonArg(String arg, Class<T> clazz, T defaultValue) {
+        if (hasArg(arg)) {
+            return GSON.fromJson(args.get(arg), clazz);
+        } else {
+            return defaultValue;
+        }
     }
 }

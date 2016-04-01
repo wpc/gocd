@@ -17,11 +17,11 @@ package com.thoughtworks.go.buildsession;
 
 import com.thoughtworks.go.domain.BuildCommand;
 
-public class SecretCommandExectutor implements BuildCommandExecutor {
+public class SecretCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        String value = command.getArgs().get("value");
-        String substitution = command.getArgs().get("substitution");
+        String value = command.getStringArg("value");
+        String substitution = command.getStringArg("substitution");
 
         if (value != null) {
             buildSession.addSecret(value, substitution);
