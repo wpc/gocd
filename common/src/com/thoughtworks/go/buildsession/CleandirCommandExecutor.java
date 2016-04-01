@@ -22,28 +22,31 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import static com.thoughtworks.go.util.FileUtil.applyBaseDirIfRelative;
 
 public class CleandirCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        String path = command.getArgs().get("path");
+        File dir = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getArgs().get("path"));
         List<String> allowed = Collections.emptyList();
         if (command.getArgs().containsKey("allowed")) {
             allowed = new Gson().<List<String>>fromJson(command.getArgs().get("allowed"), List.class);
         }
 
-        if (!allowed.isEmpty()) {
-            DirectoryCleaner cleaner = new DirectoryCleaner(new File(path), buildSession.processOutputStreamConsumer());
-            cleaner.allowed(allowed);
-            cleaner.clean();
-        } else {
+        if (allowed.isEmpty()) {
             try {
-                FileUtils.cleanDirectory(new File(path));
+                FileUtils.cleanDirectory(dir);
             } catch (IOException e) {
                 return false;
             }
+        } else {
+            DirectoryCleaner cleaner = new DirectoryCleaner(dir, buildSession.processOutputStreamConsumer());
+            cleaner.allowed(allowed);
+            cleaner.clean();
         }
         return true;
     }

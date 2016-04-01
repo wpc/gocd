@@ -17,6 +17,7 @@ package com.thoughtworks.go.buildsession;
 
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.util.Clock;
+import com.thoughtworks.go.util.GoConstants;
 import com.thoughtworks.go.util.HttpService;
 import com.thoughtworks.go.util.command.ProcessOutputStreamConsumer;
 import com.thoughtworks.go.util.command.SafeOutputStreamConsumer;
@@ -32,6 +33,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
+import static com.thoughtworks.go.util.ExceptionUtils.messageOf;
+import static com.thoughtworks.go.util.FileUtil.applyBaseDirIfRelative;
+import static java.lang.String.format;
 
 public class BuildSession {
     private static final Logger LOG = LoggerFactory.getLogger(BuildSession.class);
@@ -41,6 +45,7 @@ public class BuildSession {
     private final BuildStateReporter buildStateReporter;
     private final StreamConsumer console;
     private final DownloadAction downloadAction;
+    private File workingDir;
     private JobResult buildResult;
     private final StrLookup buildVariables;
     private ArtifactsRepository artifactsRepository;
@@ -69,7 +74,7 @@ public class BuildSession {
         executors.put("generateTestReport", new GenerateTestReportCommandExecutor());
     }
 
-    public BuildSession(String buildId, BuildStateReporter buildStateReporter, StreamConsumer console, StrLookup buildVariables, ArtifactsRepository artifactsRepository, HttpService httpService, Clock clock) {
+    public BuildSession(String buildId, BuildStateReporter buildStateReporter, StreamConsumer console, StrLookup buildVariables, ArtifactsRepository artifactsRepository, HttpService httpService, Clock clock, File workingDir) {
         this.buildId = buildId;
         this.buildStateReporter = buildStateReporter;
         this.console = console;
@@ -77,6 +82,7 @@ public class BuildSession {
         this.artifactsRepository = artifactsRepository;
         this.httpService = httpService;
         this.clock = clock;
+        this.workingDir = workingDir;
         this.envs = new HashMap<>();
         this.secretSubstitutions = new ArrayList<>();
         this.buildResult = JobResult.Passed;
@@ -154,6 +160,7 @@ public class BuildSession {
 
     private boolean doProcess(BuildCommand command, BuildCommandExecutor executor) {
         BuildCommand onCancelCommand = command.getOnCancel();
+
         try {
             if (("passed".equals(command.getRunIfConfig()) && buildResult.isFailed())
                     || ("failed".equals(command.getRunIfConfig()) && this.buildResult.isPassed())) {
@@ -173,13 +180,23 @@ public class BuildSession {
 
             return executor.execute(command, this);
 
-        } catch (RuntimeException e) {
-            LOG.error("Processing error: ", e);
+        } catch (Exception e) {
+            reportException(e);
             return false;
         } finally {
             if (isCanceled() && onCancelCommand != null) {
                 newCancelSession().processCommand(onCancelCommand);
             }
+        }
+    }
+
+    private void reportException(Exception e) {
+        String msg = messageOf(e);
+        try {
+            LOG.error(msg, e);
+            println(msg);
+        } catch (Exception reportException) {
+            LOG.error(format("Unable to report error message - %s.", messageOf(e)), reportException);
         }
     }
 
@@ -200,6 +217,10 @@ public class BuildSession {
 
     void println(String line) {
         console.consumeLine(line);
+    }
+
+    public void printlnWithPrefix(String line) {
+        this.println(String.format("[%s] %s", GoConstants.PRODUCT_NAME, line));
     }
 
     String buildVariableSubstitude(String str) {
@@ -232,7 +253,7 @@ public class BuildSession {
 
     BuildSession newTestingSession(StreamConsumer console) {
         BuildSession buildSession = new BuildSession(
-                buildId, new UncaringBuildStateReport(), console, buildVariables, artifactsRepository, httpService, clock);
+                buildId, new UncaringBuildStateReport(), console, buildVariables, artifactsRepository, httpService, clock, workingDir);
         buildSession.cancelLatch = this.cancelLatch;
         return buildSession;
     }
@@ -251,14 +272,14 @@ public class BuildSession {
         }
     }
 
-    private BuildSessionGoPublisher getPublisher() {
+    BuildSessionGoPublisher getPublisher() {
         return new BuildSessionGoPublisher(console, artifactsRepository, buildId);
     }
 
 
     private BuildSession newCancelSession() {
-        return new BuildSession(
-                buildId, new UncaringBuildStateReport(), console, buildVariables, artifactsRepository, httpService, clock);
+        return new BuildSession(buildId, new UncaringBuildStateReport(),
+                console, buildVariables, artifactsRepository, httpService, clock, workingDir);
     }
 
 
@@ -277,5 +298,17 @@ public class BuildSession {
             streamConsumer.addSecret(secretSubstitution);
         }
         return streamConsumer;
+    }
+
+    File resolveRelativeDir(String... dirs) {
+        if (dirs.length == 0) {
+            return workingDir;
+        }
+
+        File result = new File(dirs[dirs.length - 1]);
+        for (int i = dirs.length - 2; i >= 0; i--) {
+            result = applyBaseDirIfRelative(new File(dirs[i]), result);
+        }
+        return applyBaseDirIfRelative(workingDir, result);
     }
 }

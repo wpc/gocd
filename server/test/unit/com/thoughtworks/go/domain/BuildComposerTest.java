@@ -17,28 +17,27 @@ package com.thoughtworks.go.domain;
 
 import com.googlecode.junit.ext.JunitExtRunner;
 import com.googlecode.junit.ext.RunIf;
-import com.thoughtworks.go.buildsession.BuildVariables;
+import com.thoughtworks.go.buildsession.BuildSession;
+import com.thoughtworks.go.buildsession.BuildSessionBasedTest;
 import com.thoughtworks.go.config.ConfigCache;
 import com.thoughtworks.go.config.CruiseConfig;
 import com.thoughtworks.go.config.JobConfig;
 import com.thoughtworks.go.config.MagicalGoConfigXmlLoader;
 import com.thoughtworks.go.domain.buildcause.BuildCause;
 import com.thoughtworks.go.domain.builder.Builder;
-import com.thoughtworks.go.buildsession.BuildSession;
 import com.thoughtworks.go.helper.ConfigFileFixture;
 import com.thoughtworks.go.helper.JobInstanceMother;
 import com.thoughtworks.go.helper.StageMother;
 import com.thoughtworks.go.junitext.EnhancedOSChecker;
 import com.thoughtworks.go.plugin.access.pluggabletask.TaskExtension;
-import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.remote.work.BuildAssignment;
 import com.thoughtworks.go.server.domain.BuildComposer;
-import com.thoughtworks.go.server.service.AgentRuntimeInfo;
 import com.thoughtworks.go.server.service.UpstreamPipelineResolver;
 import com.thoughtworks.go.server.service.builders.*;
-import com.thoughtworks.go.util.*;
+import com.thoughtworks.go.util.ConfigElementImplementationRegistryMother;
+import com.thoughtworks.go.util.FileUtil;
+import com.thoughtworks.go.util.SystemUtil;
 import com.thoughtworks.go.util.command.InMemoryConsumer;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -50,7 +49,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.Iterables.getLast;
@@ -60,7 +58,6 @@ import static com.thoughtworks.go.junitext.EnhancedOSChecker.DO_NOT_RUN_ON;
 import static com.thoughtworks.go.junitext.EnhancedOSChecker.WINDOWS;
 import static com.thoughtworks.go.matchers.ConsoleOutMatcher.*;
 import static com.thoughtworks.go.matchers.RegexMatcher.matches;
-import static com.thoughtworks.go.util.SystemUtil.currentWorkingDirectory;
 import static com.thoughtworks.go.util.SystemUtil.isWindows;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -72,7 +69,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 @RunWith(JunitExtRunner.class)
-public class BuildComposerTest {
+public class BuildComposerTest extends BuildSessionBasedTest {
     public static final String PIPELINE_NAME = "pipeline1";
     public static final String PIPELINE_LABEL = "100";
     public static final String STAGE_NAME = "mingle";
@@ -213,14 +210,8 @@ public class BuildComposerTest {
             new PluggableTaskBuilderCreator(mock(TaskExtension.class)), new KillAllChildProcessTaskBuilder(), new FetchTaskBuilder(), new NullTaskBuilder());
     @Mock
     private static UpstreamPipelineResolver resolver;
-    @Mock
-    private HttpService httpService;
 
-    private volatile BuildStateReporterStub stateReporter;
     private volatile BuildSession buildSession;
-    private InMemoryConsumer console;
-    private ArtifactsRepositoryStub artifactsRepository;
-    private BuildVariables buildVariables;
 
 
 
@@ -255,12 +246,6 @@ public class BuildComposerTest {
     @Before
     public void setUp() throws Exception {
         initMocks(this);
-        stateReporter = new BuildStateReporterStub();
-        console = new InMemoryConsumer();
-        AgentIdentifier agentIdentifier = new AgentIdentifier("localhost", "127.0.0.1", "uuid");
-        AgentRuntimeInfo runtimeInfo = new AgentRuntimeInfo(agentIdentifier, AgentRuntimeStatus.Idle, currentWorkingDirectory(), "cookie", null, false);
-        buildVariables = new BuildVariables(runtimeInfo, new TimeProvider());
-        artifactsRepository = new ArtifactsRepositoryStub();
     }
 
     @After
@@ -271,7 +256,7 @@ public class BuildComposerTest {
     private void build(String jobXml, String pipelineName, boolean fetchMaterials, boolean cleanWorkingDir) throws Exception {
         BuildAssignment assignment = getAssigment(jobXml, pipelineName, fetchMaterials, cleanWorkingDir);
         final BuildCommand buildCommand = new BuildComposer(assignment).compose();
-        buildSession = new BuildSession("0", stateReporter, console, buildVariables, artifactsRepository, httpService, new TestingClock());
+        buildSession = newBuildSession();
         buildSession.setEnv("GO_SERVER_URL", SERVER_URL);
         buildSession.build(buildCommand);
     }
@@ -280,15 +265,15 @@ public class BuildComposerTest {
     @Test
     public void shouldUpdateBothStatusAndResultWhenBuildHasFailed() throws Exception {
         build(WILL_FAIL, PIPELINE_NAME, true, false);
-        assertThat(stateReporter.status(), is(Arrays.asList(Preparing, Building, Completing, Completed)));
-        assertThat(getLast(stateReporter.results()), is(Failed));
+        assertThat(statusReporter.status(), is(Arrays.asList(Preparing, Building, Completing, Completed)));
+        assertThat(getLast(statusReporter.results()), is(Failed));
     }
 
     @Test
     public void shouldUpdateBothStatusAndResultWhenBuildHasPassed() throws Exception {
         build(WILL_PASS, PIPELINE_NAME, true, false);
-        assertThat(stateReporter.status(), is(Arrays.asList(Preparing, Building, Completing, Completed)));
-        assertThat(getLast(stateReporter.results()), is(Passed));
+        assertThat(statusReporter.status(), is(Arrays.asList(Preparing, Building, Completing, Completed)));
+        assertThat(getLast(statusReporter.results()), is(Passed));
     }
 
     @Test
@@ -331,7 +316,7 @@ public class BuildComposerTest {
     public void shouldReportErrorWhenComandIsNotExistOnLinux() throws Exception {
         build(CMD_NOT_EXIST, PIPELINE_NAME, true, false);
         assertThat(console.output(), printedAppsMissingInfoOnUnix(SOMETHING_NOT_EXIST));
-        assertThat(stateReporter.results(), containsResult(Failed));
+        assertThat(statusReporter.results(), containsResult(Failed));
     }
 
     @Test
@@ -339,7 +324,7 @@ public class BuildComposerTest {
     public void shouldReportErrorWhenComandIsNotExistOnWindows() throws Exception {
         build(CMD_NOT_EXIST, PIPELINE_NAME, true, false);
         assertThat(console.output(), printedAppsMissingInfoOnWindows(SOMETHING_NOT_EXIST));
-        assertThat(stateReporter.results(), containsResult(Failed));
+        assertThat(statusReporter.results(), containsResult(Failed));
     }
     
     @Test
@@ -373,7 +358,7 @@ public class BuildComposerTest {
         assertThat(console.output(), containsString("Start to prepare"));
         assertThat(console.output(), not(containsString("Start updating")));
         assertThat(console.output(), containsString("Skipping material update since stage is configured not to fetch materials"));
-        assertThat(stateReporter.status().contains(JobState.Preparing), is(true));
+        assertThat(statusReporter.status().contains(JobState.Preparing), is(true));
     }
 
     @Test
@@ -381,96 +366,69 @@ public class BuildComposerTest {
         build(WILL_PASS, PIPELINE_NAME, true, false);
         assertThat(console.output(), containsString("Start to prepare"));
         assertThat(console.output(), containsString("Start to update materials"));
-        assertThat(stateReporter.status().contains(JobState.Preparing), is(true));
+        assertThat(statusReporter.status().contains(JobState.Preparing), is(true));
     }
 
     @Test
     public void shouldCreateAgentWorkingDirectoryIfNotExist() throws Exception {
-        String pipelineName = "pipeline" + UUID.randomUUID();
-        File workingdir = new File("pipelines/" + pipelineName);
-        try {
-            if (workingdir.exists()) {
-                FileUtils.deleteDirectory(workingdir);
-            }
-            assertThat(workingdir.exists(), is(false));
-            build(WILL_PASS, pipelineName, true, false);
+        String pipelineName = "pipeline1";
+        File workingdir = new File(sandbox, "pipelines/" + pipelineName);
+        assertThat(workingdir.exists(), is(false));
+        build(WILL_PASS, pipelineName, true, false);
 
-            assertThat(console.output(),
-                    not(containsString("Working directory \"" + workingdir.getAbsolutePath() + "\" is not a directory")));
+        assertThat(console.output(),
+                not(containsString("Working directory \"" + workingdir.getAbsolutePath() + "\" is not a directory")));
 
-            assertThat(stateReporter.results().contains(Passed), is(true));
-            assertThat(workingdir.exists(), is(true));
-        } finally {
-            FileUtils.deleteDirectory(workingdir);
-        }
+        assertThat(statusReporter.results().contains(Passed), is(true));
+        assertThat(workingdir.exists(), is(true));
     }
 
     @Test
     public void shouldNotBombWhenCreatingWorkingDirectoryIfCleanWorkingDirectoryFlagIsTrue() throws Exception {
-        String pipelineName = "pipeline" + UUID.randomUUID();
-        File workingdir = new File("pipelines/" + pipelineName);
-        try {
-            if (workingdir.exists()) {
-                FileUtils.deleteDirectory(workingdir);
-            }
-            assertThat(workingdir.exists(), is(false));
-            build(WILL_PASS, pipelineName, true, true);
+        String pipelineName = "p1";
+        File workingdir = new File(sandbox, "pipelines/" + pipelineName);
+        assertThat(workingdir.exists(), is(false));
+        build(WILL_PASS, pipelineName, true, true);
 
-            assertThat(console.output(),
-                    not(containsString("Working directory \"" + workingdir.getAbsolutePath() + "\" is not a directory")));
+        assertThat(console.output(),
+                not(containsString("Working directory \"" + workingdir.getAbsolutePath() + "\" is not a directory")));
 
-            assertThat(stateReporter.results().contains(Passed), is(true));
-            assertThat(workingdir.exists(), is(true));
-        } finally {
-            workingdir.delete();
-        }
+        assertThat(statusReporter.results().contains(Passed), is(true));
+        assertThat(workingdir.exists(), is(true));
     }
 
     @Test
     public void shouldCreateAgentWorkingDirectoryIfNotExistWhenFetchMaterialsIsFalse() throws Exception {
-        String pipelineName = "pipeline" + UUID.randomUUID();
-        File workingdir = new File("pipelines/" + pipelineName);
-        try {
-            if (workingdir.exists()) {
-                FileUtils.deleteDirectory(workingdir);
-            }
-            assertThat(workingdir.exists(), is(false));
-            build(WILL_PASS, pipelineName, false, false);
+        String pipelineName = "p1";
+        File workingdir = new File(sandbox, "pipelines/" + pipelineName);
+        assertThat(workingdir.exists(), is(false));
+        build(WILL_PASS, pipelineName, false, false);
 
-            assertThat(console.output(), not(containsString("Working directory \"" + workingdir.getAbsolutePath() + "\" is not a directory")));
-            assertThat(stateReporter.results().contains(Passed), is(true));
-            assertThat(workingdir.exists(), is(true));
-        } finally {
-            workingdir.delete();
-        }
+        assertThat(console.output(), not(containsString("Working directory \"" + workingdir.getAbsolutePath() + "\" is not a directory")));
+        assertThat(statusReporter.results().contains(Passed), is(true));
+        assertThat(workingdir.exists(), is(true));
     }
 
     @Test
     public void shouldCleanAgentWorkingDirectoryIfExistsWhenCleanWorkingDirIsTrue() throws Exception {
-        String pipelineName = "pipeline" + UUID.randomUUID();
-        File workingdir = new File("pipelines/" + pipelineName);
-        try {
-            if (workingdir.exists()) {
-                FileUtils.deleteDirectory(workingdir);
-            }
-            workingdir.mkdirs();
-            new File(workingdir, "foo").createNewFile();
-            new File(workingdir, "bar").mkdirs();
-            assertThat(workingdir.listFiles().length, is(2));
+        String pipelineName = "p1";
+        File workingdir = new File(sandbox, "pipelines/" + pipelineName);
+        workingdir.mkdirs();
+        new File(workingdir, "foo").createNewFile();
+        new File(workingdir, "bar").mkdirs();
+        assertThat(workingdir.listFiles().length, is(2));
 
-            build(WILL_PASS, pipelineName, false, true);
-            assertThat(stateReporter.results().contains(Passed), is(true));
-            assertThat(workingdir.exists(), is(true));
-            assertThat(workingdir.listFiles().length, is(0));
-        } finally {
-            workingdir.delete();
-        }
+        build(WILL_PASS, pipelineName, false, true);
+        assertThat(statusReporter.results().contains(Passed), is(true));
+        assertThat(workingdir.exists(), is(true));
+        assertThat(workingdir.listFiles().length, is(0));
     }
 
     @Test
-    public void shouldReportCurrentWorkingDirectory() throws Exception {
+    public void shouldReportAgentLocation() throws Exception {
+        buildVariables.put("agent.location", "far/far/away");
         build(WILL_PASS, PIPELINE_NAME, true, false);
-        assertThat(console.output(), containsString("[" + SystemUtil.currentWorkingDirectory() + "]"));
+        assertThat(console.output(), containsString("[far/far/away]"));
     }
 
     @Test
@@ -516,8 +474,8 @@ public class BuildComposerTest {
         buildThread.start();
         console.waitForContain("before sleep", 5);
         assertTrue(buildSession.cancel(30, TimeUnit.SECONDS));
-        assertThat(stateReporter.status(), is(Arrays.asList(Preparing, Building, Completed)));
-        assertThat(stateReporter.results(), is(Collections.singletonList(Cancelled)));
+        assertThat(statusReporter.status(), is(Arrays.asList(Preparing, Building, Completed)));
+        assertThat(statusReporter.results(), is(Collections.singletonList(Cancelled)));
         assertThat(console.output(), printedJobCompletedInfo(JOB_IDENTIFIER.buildLocatorForDisplay()));
         assertThat(console.output(), printedJobCanceledInfo(JOB_IDENTIFIER.buildLocatorForDisplay()));
         assertThat(console.output(), containsString("executing on cancel task"));
@@ -530,12 +488,12 @@ public class BuildComposerTest {
     @Test
     public void shouldReportUploadMessageWhenUpload() throws Exception {
         String destFolder = "dest\\test\\sub-folder";
-        File basedir = new File("pipelines/pipeline1");
+        File basedir = new File(sandbox, "pipelines/pipeline1");
         basedir.mkdirs();
         File artifact = new File(basedir, "artifact");
         artifact.createNewFile();
         build(willUploadToDest("artifact", destFolder), PIPELINE_NAME, true, false);
-        assertThat("build should pass, console output is" + console.output(), getLast(stateReporter.results()), is(Passed));
+        assertThat("build should pass, console output is" + console.output(), getLast(statusReporter.results()), is(Passed));
         assertThat(artifactsRepository.getFileUploaded().size(), is(1));
         assertThat(artifactsRepository.getFileUploaded().get(0).file, is(artifact));
     }
@@ -544,7 +502,7 @@ public class BuildComposerTest {
     public void shouldFailTheJobWhenFailedToUploadArtifact() throws Exception {
         artifactsRepository.setUploadError(new RuntimeException("upload failed"));
         build(willUpload("cruise-output/log.xml"), PIPELINE_NAME, true, false);
-        assertThat(stateReporter.results(), containsResult(Failed));
+        assertThat(statusReporter.results(), containsResult(Failed));
     }
 
     private static BuildAssignment getAssigment(String jobXml, String pipelineName, boolean fetchMaterials, boolean cleanWorkingDir) throws Exception {

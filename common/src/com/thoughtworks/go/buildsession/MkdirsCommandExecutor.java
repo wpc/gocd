@@ -19,10 +19,12 @@ import com.thoughtworks.go.domain.BuildCommand;
 
 import java.io.File;
 
+import static com.thoughtworks.go.util.FileUtil.applyBaseDirIfRelative;
+
 public class MkdirsCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        String path = command.getArgs().get("path");
-        return new File(path).mkdirs();
+        File dir = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getArgs().get("path"));
+        return dir.mkdirs();
     }
 }

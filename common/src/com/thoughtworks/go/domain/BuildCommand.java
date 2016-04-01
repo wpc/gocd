@@ -291,7 +291,7 @@ public class BuildCommand {
     }
 
     public String getWorkingDirectory() {
-        return workingDirectory == null ? "." : workingDirectory;
+        return workingDirectory == null ? "" : workingDirectory;
     }
 
     public Test getTest() {

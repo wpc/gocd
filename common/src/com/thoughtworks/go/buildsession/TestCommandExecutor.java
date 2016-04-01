@@ -25,14 +25,17 @@ import static java.lang.String.format;
 public class TestCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
+
         String flag = command.getArgs().get("flag");
         String left = command.getArgs().get("left");
         if ("-d".equals(flag)) {
-            return new File(left).isDirectory();
+            File target = buildSession.resolveRelativeDir(command.getWorkingDirectory(), left);
+            return target.isDirectory();
         }
 
         if ("-f".equals(flag)) {
-            return new File(left).isFile();
+            File target = buildSession.resolveRelativeDir(command.getWorkingDirectory(), left);
+            return target.isFile();
         }
 
         if ("-eq".equals(flag)) {

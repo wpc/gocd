@@ -37,14 +37,14 @@ public class DownloadDirCommandExecutor implements BuildCommandExecutor {
             checksumUrl = new URLService().prefixPartialUrl(command.getArgs().get("checksumUrl"));
             File checksumFile;
             if (command.getArgs().containsKey("checksumFile")) {
-                checksumFile = new File(command.getArgs().get("checksumFile"));
+                checksumFile = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getArgs().get("checksumFile"));
             } else {
                 checksumFile = TempFiles.createUniqueFile("checksum");
             }
             checksumFileHandler = new ChecksumFileHandler(checksumFile);
         }
 
-        DirHandler handler = new DirHandler(src, new File(dest));
+        DirHandler handler = new DirHandler(src, buildSession.resolveRelativeDir(command.getWorkingDirectory(), dest));
         buildSession.download(handler, url, checksumFileHandler, checksumUrl);
         return true;
     }

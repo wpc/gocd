@@ -17,16 +17,10 @@ package com.thoughtworks.go.buildsession;
 
 import com.googlecode.junit.ext.JunitExtRunner;
 import com.googlecode.junit.ext.RunIf;
-import com.thoughtworks.go.domain.ArtifactsRepositoryStub;
 import com.thoughtworks.go.domain.BuildCommand;
-import com.thoughtworks.go.domain.BuildStateReporterStub;
 import com.thoughtworks.go.domain.JobResult;
 import com.thoughtworks.go.junitext.EnhancedOSChecker;
-import com.thoughtworks.go.remote.work.HttpServiceStub;
 import com.thoughtworks.go.util.*;
-import com.thoughtworks.go.util.command.InMemoryConsumer;
-import org.apache.commons.lang.text.StrLookup;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -55,22 +49,13 @@ import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(JunitExtRunner.class)
-public class BuildSessionTest {
-    private BuildStateReporterStub statusReporter;
-    private Map<String, String> buildVariables;
-    private File sanbox;
-    private ArtifactsRepositoryStub artifactsRepository;
-    private InMemoryConsumer console;
-    private HttpServiceStub httpService;
-
-    @Before
-    public void setup() {
-        statusReporter = new BuildStateReporterStub();
-        buildVariables = new HashMap<>();
-        artifactsRepository = new ArtifactsRepositoryStub();
-        sanbox = TestFileUtil.createTempFolder(UUID.randomUUID().toString());
-        console = new InMemoryConsumer();
-        httpService = new HttpServiceStub();
+public class BuildSessionTest extends BuildSessionBasedTest {
+    @Test
+    public void resolveRelativeDir() throws IOException {
+        BuildSession buildSession = newBuildSession();
+        assertThat(buildSession.resolveRelativeDir("foo"), is(new File(sandbox, "foo")));
+        assertThat(buildSession.resolveRelativeDir("foo", "bar"), is(new File(sandbox, "foo/bar")));
+        assertThat(buildSession.resolveRelativeDir("", "bar"), is(new File(sandbox, "bar")));
     }
 
     @Test
@@ -208,23 +193,30 @@ public class BuildSessionTest {
 
     @Test
     public void mkdirsShouldCreateDirectoryIfNotExists() {
-        File dir = new File(sanbox, "foo");
-        runBuild(mkdirs(dir.getPath()), Passed);
-        assertThat(dir.isDirectory(), is(true));
+        runBuild(mkdirs("foo"), Passed);
+        assertThat(new File(sandbox, "foo").isDirectory(), is(true));
     }
 
     @Test
     public void mkdirsShouldFailIfDirExists() {
-        File dir = new File(sanbox, "foo");
-        runBuild(mkdirs(dir.getPath()), Passed);
-        runBuild(mkdirs(dir.getPath()), Failed);
+        runBuild(mkdirs("foo"), Passed);
+        runBuild(mkdirs("foo"), Failed);
+        assertThat(new File(sandbox, "foo").isDirectory(), is(true));
     }
 
     @Test
     public void testDirectoryExistsBeforeMkdir() {
-        File dir = new File(sanbox, "foo");
-        runBuild(mkdirs(dir.getPath()), Passed);
-        runBuild(mkdirs(dir.getPath()).setTest(test("-d", dir.getPath()), false), Passed);
+        File dir = new File(sandbox, "foo");
+        runBuild(mkdirs("foo"), Passed);
+        runBuild(mkdirs("foo").setTest(test("-d", dir.getPath()), false), Passed);
+        assertThat(new File(sandbox, "foo").isDirectory(), is(true));
+    }
+
+    @Test
+    public void mkdirWithWorkingDir() {
+        runBuild(mkdirs("foo").setWorkingDirectory("bar"), Passed);
+        assertThat(new File(sandbox, "bar/foo").isDirectory(), is(true));
+        assertThat(new File(sandbox, "foo").isDirectory(), is(false));
     }
 
     @Test
@@ -250,25 +242,41 @@ public class BuildSessionTest {
 
     @Test
     public void cleanDirWithoutAllows() throws IOException {
-        runBuild(mkdirs(new File(sanbox, "foo/baz").getPath()), Passed);
-        assertTrue(new File(sanbox, "foo/file1").createNewFile());
-        assertTrue(new File(sanbox, "file2").createNewFile());
+        runBuild(mkdirs("foo/baz"), Passed);
+        assertTrue(new File(sandbox, "foo/file1").createNewFile());
+        assertTrue(new File(sandbox, "file2").createNewFile());
 
-        runBuild(cleandir(sanbox.getPath()), Passed);
-        assertThat(sanbox.exists(), is(true));
-        assertThat(sanbox.listFiles().length, is(0));
+        runBuild(cleandir(""), Passed);
+        assertThat(sandbox.exists(), is(true));
+        assertThat(sandbox.listFiles().length, is(0));
     }
 
     @Test
     public void cleanDirWithAllows() throws IOException {
-        runBuild(mkdirs(new File(sanbox, "foo/baz").getPath()), Passed);
-        runBuild(mkdirs(new File(sanbox, "foo2").getPath()), Passed);
-        assertTrue(new File(sanbox, "foo/file1").createNewFile());
-        assertTrue(new File(sanbox, "file2").createNewFile());
+        runBuild(mkdirs("bar/foo/baz"), Passed);
+        runBuild(mkdirs("bar/foo2"), Passed);
+        assertTrue(new File(sandbox, "bar/foo/file1").createNewFile());
+        assertTrue(new File(sandbox, "bar/file2").createNewFile());
+        assertTrue(new File(sandbox, "file3").createNewFile());
 
-        runBuild(cleandir(sanbox.getPath(), "file2", "foo2"), Passed);
-        assertThat(sanbox.exists(), is(true));
-        assertThat(sanbox.listFiles(), is(new File[]{new File(sanbox, "file2"), new File(sanbox, "foo2")}));
+        runBuild(cleandir("bar", "file2", "foo2"), Passed);
+        assertThat(new File(sandbox, "bar").isDirectory(), is(true));
+        assertThat(new File(sandbox, "file3").exists(), is(true));
+        assertThat(new File(sandbox, "bar").listFiles(), is(new File[]{new File(sandbox, "bar/file2"), new File(sandbox, "bar/foo2")}));
+    }
+
+    @Test
+    public void cleanDirWithAllowsAndWorkingDir() throws IOException {
+        runBuild(mkdirs("bar/foo/baz"), Passed);
+        runBuild(mkdirs("bar/foo2"), Passed);
+        assertTrue(new File(sandbox, "bar/foo/file1").createNewFile());
+        assertTrue(new File(sandbox, "bar/file2").createNewFile());
+        assertTrue(new File(sandbox, "file3").createNewFile());
+
+        runBuild(cleandir("", "file2", "foo2").setWorkingDirectory("bar"), Passed);
+        assertThat(new File(sandbox, "bar").isDirectory(), is(true));
+        assertThat(new File(sandbox, "file3").exists(), is(true));
+        assertThat(new File(sandbox, "bar").listFiles(), is(new File[]{new File(sandbox, "bar/file2"), new File(sandbox, "bar/foo2")}));
     }
 
 
@@ -283,20 +291,22 @@ public class BuildSessionTest {
 
     @Test
     public void testDirExists() throws IOException {
-        runBuild(test("-d", sanbox.getPath()), Passed);
-        runBuild(test("-d", new File(sanbox, "foo").getPath()), Failed);
-        File file = new File(sanbox, "file");
-        file.createNewFile();
-        runBuild(test("-d", file.getPath()), Failed);
+        runBuild(test("-d", ""), Passed);
+        runBuild(test("-d", "dir"), Failed);
+        runBuild(test("-d", "file"), Failed);
+        assertTrue(new File(sandbox, "file").createNewFile());
+        assertTrue(new File(sandbox, "dir").mkdir());
+        runBuild(test("-d", "file"), Failed);
+        runBuild(test("-d", "dir"), Passed);
     }
 
     @Test
     public void testFileExists() throws IOException {
-        runBuild(test("-f", sanbox.getPath()), Failed);
-        runBuild(test("-f", new File(sanbox, "foo").getPath()), Failed);
-        File file = new File(sanbox, "file");
+        runBuild(test("-f", ""), Failed);
+        runBuild(test("-f", "file"), Failed);
+        File file = new File(sandbox, "file");
         assertTrue(file.createNewFile());
-        runBuild(test("-f", file.getPath()), Passed);
+        runBuild(test("-f", "file"), Passed);
     }
 
     @Test
@@ -365,9 +375,9 @@ public class BuildSessionTest {
 
     @Test
     public void uploadSingleFileArtifact() throws Exception {
-        File targetFile = new File(sanbox, "foo");
+        File targetFile = new File(sandbox, "foo");
         assertTrue(targetFile.createNewFile());
-        runBuild(uploadArtifact("foo", "foo-dest").setWorkingDirectory(sanbox.getPath()), Passed);
+        runBuild(uploadArtifact("foo", "foo-dest").setWorkingDirectory(sandbox.getPath()), Passed);
         assertThat(artifactsRepository.getFileUploaded().size(), is(1));
         assertThat(artifactsRepository.getFileUploaded().get(0).file, is(targetFile));
         assertThat(artifactsRepository.getFileUploaded().get(0).destPath, is("foo-dest"));
@@ -376,11 +386,11 @@ public class BuildSessionTest {
 
     @Test
     public void uploadMultipleArtifact() throws Exception {
-        File dir = new File(sanbox, "foo");
+        File dir = new File(sandbox, "foo");
         assertTrue(dir.mkdirs());
         assertTrue(new File(dir, "bar").createNewFile());
         assertTrue(new File(dir, "baz").createNewFile());
-        runBuild(uploadArtifact("foo/*", "foo-dest").setWorkingDirectory(sanbox.getPath()), Passed);
+        runBuild(uploadArtifact("foo/*", "foo-dest"), Passed);
         assertThat(artifactsRepository.getFileUploaded().size(), is(2));
         assertThat(artifactsRepository.getFileUploaded().get(0).file, is(new File(dir, "bar")));
         assertThat(artifactsRepository.getFileUploaded().get(1).file, is(new File(dir, "baz")));
@@ -400,10 +410,10 @@ public class BuildSessionTest {
         });
         try {
             buildingThread.start();
-            waitForConsoleOutputIncludes("start sleeping", 5);
-            assertTrue(info(), buildSession.cancel(30, TimeUnit.SECONDS));
-            assertThat(info(), getLast(statusReporter.results()), is(Cancelled));
-            assertThat(info(), console.output(), not(containsString("build done")));
+            console.waitForContain("start sleeping", 5);
+            assertTrue(buildInfo(), buildSession.cancel(30, TimeUnit.SECONDS));
+            assertThat(buildInfo(), getLast(statusReporter.results()), is(Cancelled));
+            assertThat(buildInfo(), console.output(), not(containsString("build done")));
         } finally {
             buildingThread.join();
         }
@@ -423,10 +433,10 @@ public class BuildSessionTest {
         });
         try {
             buildingThread.start();
-            waitForConsoleOutputIncludes("start sleeping", 5);
-            assertTrue(info(), buildSession.cancel(30, TimeUnit.SECONDS));
-            assertThat(info(), getLast(statusReporter.results()), is(Cancelled));
-            assertThat(info(), console.output(), not(containsString("after sleep")));
+            console.waitForContain("start sleeping", 5);
+            assertTrue(buildInfo(), buildSession.cancel(30, TimeUnit.SECONDS));
+            assertThat(buildInfo(), getLast(statusReporter.results()), is(Cancelled));
+            assertThat(buildInfo(), console.output(), not(containsString("after sleep")));
         } finally {
             buildingThread.join();
         }
@@ -456,13 +466,13 @@ public class BuildSessionTest {
 
         try {
             buildingThread.start();
-            waitForConsoleOutputIncludes("start sleeping", 5);
+            console.waitForContain("start sleeping", 5);
             cancelThread1.start();
             cancelThread2.start();
             cancelThread1.join();
             cancelThread2.join();
-            assertThat(info(), getLast(statusReporter.results()), is(Cancelled));
-            assertThat(info(), console.output(), not(containsString("after sleep")));
+            assertThat(buildInfo(), getLast(statusReporter.results()), is(Cancelled));
+            assertThat(buildInfo(), console.output(), not(containsString("after sleep")));
         } finally {
             buildingThread.join();
         }
@@ -486,13 +496,13 @@ public class BuildSessionTest {
 
         try {
             buildingThread.start();
-            waitForConsoleOutputIncludes("start sleeping", 5);
-            assertTrue(info(), buildSession.cancel(30, TimeUnit.SECONDS));
-            assertThat(info(), getLast(statusReporter.results()), is(Cancelled));
-            assertThat(info(), console.output(), not(containsString("after sleep")));
-            assertThat(info(), console.output(), containsString("exec canceled"));
-            assertThat(info(), console.output(), containsString("inner oncancel"));
-            assertThat(info(), console.output(), containsString("outter oncancel"));
+            console.waitForContain("start sleeping", 5);
+            assertTrue(buildInfo(), buildSession.cancel(30, TimeUnit.SECONDS));
+            assertThat(buildInfo(), getLast(statusReporter.results()), is(Cancelled));
+            assertThat(buildInfo(), console.output(), not(containsString("after sleep")));
+            assertThat(buildInfo(), console.output(), containsString("exec canceled"));
+            assertThat(buildInfo(), console.output(), containsString("inner oncancel"));
+            assertThat(buildInfo(), console.output(), containsString("outter oncancel"));
         } finally {
             buildingThread.join();
         }
@@ -502,38 +512,37 @@ public class BuildSessionTest {
     public void downloadFilePrintErrorWhenFailed() {
         runBuild(downloadFile(map(
                 "url", "http://far.far.away/foo.jar",
-                "dest", new File(sanbox, "bar.jar").getPath())), Failed);
+                "dest", new File(sandbox, "bar.jar").getPath())), Failed);
         assertThat(console.output(), containsString("Could not fetch artifact"));
     }
 
     @Test
     public void downloadFileWithoutMD5Check() throws IOException {
-        File dest = new File(sanbox, "bar.jar");
+        File dest = new File(sandbox, "bar.jar");
         httpService.setupDownload("http://far.far.away/foo.jar", "some content");
         runBuild(downloadFile(map(
                 "url", "http://far.far.away/foo.jar",
-                "dest", dest.getPath())), Passed);
+                "dest", "bar.jar")), Passed);
         assertThat(console.output(), containsString("without verifying the integrity"));
         assertThat(FileUtil.readContentFromFile(dest), is("some content"));
     }
 
     @Test
     public void downloadFileWithMD5Check() throws IOException {
-        File dest = new File(sanbox, "bar.jar");
         httpService.setupDownload("http://far.far.away/foo.jar", "some content");
         httpService.setupDownload("http://far.far.away/foo.jar.md5", "foo.jar=9893532233caff98cd083a116b013c0b");
         runBuild(downloadFile(map(
                 "url", "http://far.far.away/foo.jar",
-                "dest", dest.getPath(),
+                "dest", "dest.jar",
                 "src", "foo.jar",
                 "checksumUrl", "http://far.far.away/foo.jar.md5")), Passed);
-        assertThat(console.output(), containsString(String.format("Saved artifact to [%s] after verifying the integrity of its contents", dest.getAbsolutePath())));
-        assertThat(FileUtil.readContentFromFile(dest), is("some content"));
+        assertThat(console.output(), containsString(String.format("Saved artifact to [%s] after verifying the integrity of its contents", new File(sandbox, "dest.jar").getPath())));
+        assertThat(FileUtil.readContentFromFile(new File(sandbox, "dest.jar")), is("some content"));
     }
 
     @Test
     public void downloadFileShouldAppendSha1IntoDownloadUrlIfDestFileAlreadyExists() throws IOException {
-        File dest = new File(sanbox, "bar.jar");
+        File dest = new File(sandbox, "bar.jar");
         Files.write(Paths.get(dest.getPath()), "foobar".getBytes());
         String sha1 = java.net.URLEncoder.encode(StringUtil.sha1Digest(dest), "UTF-8");
 
@@ -541,16 +550,13 @@ public class BuildSessionTest {
         httpService.setupDownload("http://far.far.away/foo.jar?sha1=" + sha1, "content with sha1");
         runBuild(downloadFile(map(
                 "url", "http://far.far.away/foo.jar",
-                "dest", dest.getPath())), Passed);
+                "dest", "bar.jar")), Passed);
         assertThat(console.output(), containsString("Saved artifact"));
         assertThat(FileUtil.readContentFromFile(dest), is("content with sha1"));
     }
 
     @Test
     public void downloadDirWithChecksum() throws Exception {
-        File dest = new File(sanbox, "dest");
-        assertTrue(dest.mkdirs());
-
         File folder = TestFileUtil.createTempFolder("log");
         Files.write(Paths.get(folder.getPath(), "a"), "content for a".getBytes());
         Files.write(Paths.get(folder.getPath(), "b"), "content for b".getBytes());
@@ -559,13 +565,15 @@ public class BuildSessionTest {
         File zip = new ZipUtil().zip(folder, TestFileUtil.createUniqueTempFile(folder.getName()), Deflater.NO_COMPRESSION);
 
         httpService.setupDownload("http://far.far.away/log.zip", zip);
-        httpService.setupDownload("http://far.far.away/log.zip.md5", "log/a=524ebd45bd7de3616317127f6e639bd6\nlog/b=83c0aa3048df233340203c74e8a93d7d");
+        httpService.setupDownload("http://far.far.away/log.zip.md5", "s/log/a=524ebd45bd7de3616317127f6e639bd6\ns/log/b=83c0aa3048df233340203c74e8a93d7d");
 
         runBuild(downloadDir(map(
                 "url", "http://far.far.away/log.zip",
-                "dest", dest.getPath(),
-                "src", "foo.jar",
+                "dest", "dest",
+                "src", "s/log",
                 "checksumUrl", "http://far.far.away/log.zip.md5")), Passed);
+        File dest = new File(sandbox, "dest");
+
         assertThat(console.output(), containsString(String.format("Saved artifact to [%s] after verifying the integrity of its contents", dest.getPath())));
         assertThat(FileUtil.readContentFromFile(new File(dest, "log/a")), is("content for a"));
         assertThat(FileUtil.readContentFromFile(new File(dest, "log/b")), is("content for b"));
@@ -574,7 +582,7 @@ public class BuildSessionTest {
 
     private void runBuild(BuildSession buildSession, BuildCommand command, JobResult expectedResult) {
         JobResult result = buildSession.build(command);
-        assertThat(info(), result, is(expectedResult));
+        assertThat(buildInfo(), result, is(expectedResult));
 
     }
 
@@ -582,26 +590,6 @@ public class BuildSessionTest {
         runBuild(newBuildSession(), command, expectedResult);
     }
 
-    private BuildSession newBuildSession() {
-        return new BuildSession("build1",
-                statusReporter,
-                console,
-                StrLookup.mapLookup(buildVariables),
-                artifactsRepository, httpService, new TestingClock());
-    }
-
-    private void waitForConsoleOutputIncludes(String content, int timoutInSeconds) throws InterruptedException {
-        long start = System.nanoTime();
-        while (true) {
-            if (console.output().contains(content)) {
-                break;
-            }
-            if (System.nanoTime() - start > TimeUnit.SECONDS.toNanos(timoutInSeconds)) {
-                throw new RuntimeException("waiting timeout!" + info());
-            }
-            Thread.sleep(10);
-        }
-    }
 
     private BuildCommand execEchoEnv(final String envname) {
         if (SystemUtil.isWindows()) {
@@ -623,12 +611,4 @@ public class BuildSessionTest {
         return SystemUtil.isWindows() ? "Path" : "PATH";
     }
 
-    private String info() {
-        return "\n*** Assertion failure *** \n"
-                + "build status: " + statusReporter.status() + "\n"
-                + "build result: " + statusReporter.results() + "\n"
-                + "build console output: \n"
-                + console.output()
-                + "\n******";
-    }
 }

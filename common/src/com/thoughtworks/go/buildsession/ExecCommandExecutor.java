@@ -39,7 +39,7 @@ public class ExecCommandExecutor implements BuildCommandExecutor {
 
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        File workingDir = new File(command.getWorkingDirectory());
+        File workingDir = buildSession.resolveRelativeDir(command.getWorkingDirectory());
         if (!workingDir.isDirectory()) {
             String message = "Working directory \"" + workingDir.getAbsolutePath() + "\" is not a directory!";
             LOG.error(message);
@@ -58,9 +58,7 @@ public class ExecCommandExecutor implements BuildCommandExecutor {
             commandLine = CommandLine.createCommandLine(args[0]);
         }
 
-        if (command.getWorkingDirectory() != null) {
-            commandLine.withWorkingDir(new File(command.getWorkingDirectory()));
-        }
+        commandLine.withWorkingDir(workingDir);
 
         commandLine.withEnv(buildSession.getEnvs());
 

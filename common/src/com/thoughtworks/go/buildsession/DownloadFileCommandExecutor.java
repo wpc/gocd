@@ -36,7 +36,7 @@ public class DownloadFileCommandExecutor implements BuildCommandExecutor {
         String url = urlService.prefixPartialUrl(command.getArgs().get("url"));
         String dest = command.getArgs().get("dest");
         String src = command.getArgs().get("src");
-        File artifact = new File(dest);
+        File artifact = buildSession.resolveRelativeDir(command.getWorkingDirectory(), dest);
         FileHandler handler = new FileHandler(artifact, src);
         String checksumUrl = null;
         ChecksumFileHandler checksumFileHandler = null;
@@ -45,7 +45,7 @@ public class DownloadFileCommandExecutor implements BuildCommandExecutor {
             checksumUrl = new URLService().prefixPartialUrl(command.getArgs().get("checksumUrl"));
             File checksumFile;
             if (command.getArgs().containsKey("checksumFile")) {
-                checksumFile = new File(command.getArgs().get("checksumFile"));
+                checksumFile = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getArgs().get("checksumFile"));
             } else {
                 checksumFile = TempFiles.createUniqueFile("checksum");
             }

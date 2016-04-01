@@ -28,13 +28,13 @@ public class UploadArtifactCommandExecutor implements BuildCommandExecutor {
     public boolean execute(BuildCommand command, BuildSession buildSession) {
         final String src = command.getArgs().get("src");
         final String dest = command.getArgs().get("dest");
-        final File rootPath = new File(command.getWorkingDirectory());
+        final File rootPath = buildSession.resolveRelativeDir(command.getWorkingDirectory());
 
         WildcardScanner scanner = new WildcardScanner(rootPath, src);
         File[] files = scanner.getFiles();
         if (files.length == 0) {
             String message = "The rule [" + src + "] cannot match any resource under [" + rootPath + "]";
-            buildSession.println(format("[%s] %s", GoConstants.PRODUCT_NAME, message));
+            buildSession.printlnWithPrefix(message);
             return false;
         }
         for (File file : files) {

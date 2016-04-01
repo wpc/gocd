@@ -123,14 +123,9 @@ public class GitMaterialUpdater {
 
     private BuildCommand cloneIfNeeded(String workDir, int cloneDepth) {
         return compose(
-                createParentDir(workDir),
+                mkdirs(workDir).setTest(test("-d", workDir), false),
                 cleanWorkingDir(workDir),
                 cmdClone(workDir, cloneDepth));
-    }
-
-    private BuildCommand createParentDir(String workDir) {
-        String parentPath = new File(workDir).getParentFile().getPath();
-        return mkdirs(parentPath).setTest(test("-d", parentPath), false);
     }
 
     private BuildCommand cleanWorkingDir(String workDir) {
