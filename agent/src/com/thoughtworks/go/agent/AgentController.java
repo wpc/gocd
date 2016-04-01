@@ -339,7 +339,7 @@ public class AgentController {
                 buildConsole,
                 buildVariables,
                 artifactsRepository,
-                httpService, clock, new File(""));
+                httpService, clock, new File("."));
 
         this.buildSession.set(build);
 

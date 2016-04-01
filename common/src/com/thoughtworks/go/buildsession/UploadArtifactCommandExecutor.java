@@ -18,10 +18,15 @@ package com.thoughtworks.go.buildsession;
 import com.thoughtworks.go.domain.BuildCommand;
 import com.thoughtworks.go.domain.WildcardScanner;
 import com.thoughtworks.go.util.GoConstants;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.File;
 
+import static com.thoughtworks.go.util.FileUtil.normalizePath;
+import static com.thoughtworks.go.util.FileUtil.subtractPath;
+import static com.thoughtworks.go.util.SelectorUtils.rtrimStandardrizedWildcardTokens;
 import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.removeStart;
 
 public class UploadArtifactCommandExecutor implements BuildCommandExecutor {
     @Override
@@ -38,8 +43,21 @@ public class UploadArtifactCommandExecutor implements BuildCommandExecutor {
             return false;
         }
         for (File file : files) {
-            buildSession.upload(file, dest);
+            buildSession.upload(file, destURL(rootPath, file, src, dest));
         }
         return true;
     }
+
+    protected String destURL(File rootPath, File file, String src, String dest) {
+        String trimmedPattern = rtrimStandardrizedWildcardTokens(src);
+        if (StringUtils.equals(normalizePath(trimmedPattern), normalizePath(src))) {
+            return dest;
+        }
+        String trimmedPath = removeStart(subtractPath(rootPath, file), normalizePath(trimmedPattern));
+        if (!StringUtils.startsWith(trimmedPath, "/") && StringUtils.isNotEmpty(trimmedPath)) {
+            trimmedPath = "/" + trimmedPath;
+        }
+        return dest + trimmedPath;
+    }
+
 }

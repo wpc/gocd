@@ -49,7 +49,7 @@ import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(JunitExtRunner.class)
-public class BuildSessionTest extends BuildSessionBasedTest {
+public class BuildSessionTest extends BuildSessionBasedTestCase {
     @Test
     public void resolveRelativeDir() throws IOException {
         BuildSession buildSession = newBuildSession();
@@ -400,30 +400,6 @@ public class BuildSessionTest extends BuildSessionBasedTest {
     }
 
     @Test
-    public void uploadSingleFileArtifact() throws Exception {
-        File targetFile = new File(sandbox, "foo");
-        assertTrue(targetFile.createNewFile());
-        runBuild(uploadArtifact("foo", "foo-dest").setWorkingDirectory(sandbox.getPath()), Passed);
-        assertThat(artifactsRepository.getFileUploaded().size(), is(1));
-        assertThat(artifactsRepository.getFileUploaded().get(0).file, is(targetFile));
-        assertThat(artifactsRepository.getFileUploaded().get(0).destPath, is("foo-dest"));
-        assertThat(artifactsRepository.getFileUploaded().get(0).buildId, is("build1"));
-    }
-
-    @Test
-    public void uploadMultipleArtifact() throws Exception {
-        File dir = new File(sandbox, "foo");
-        assertTrue(dir.mkdirs());
-        assertTrue(new File(dir, "bar").createNewFile());
-        assertTrue(new File(dir, "baz").createNewFile());
-        runBuild(uploadArtifact("foo/*", "foo-dest"), Passed);
-        assertThat(artifactsRepository.getFileUploaded().size(), is(2));
-        assertThat(artifactsRepository.getFileUploaded().get(0).file, is(new File(dir, "bar")));
-        assertThat(artifactsRepository.getFileUploaded().get(1).file, is(new File(dir, "baz")));
-    }
-
-
-    @Test
     public void cancelLongRunningBuild() throws InterruptedException {
         final BuildSession buildSession = newBuildSession();
         Thread buildingThread = new Thread(new Runnable() {
@@ -602,18 +578,6 @@ public class BuildSessionTest extends BuildSessionBasedTest {
         assertThat(FileUtil.readContentFromFile(new File(dest, "log/a")), is("content for a"));
         assertThat(FileUtil.readContentFromFile(new File(dest, "log/b")), is("content for b"));
     }
-
-
-    private void runBuild(BuildSession buildSession, BuildCommand command, JobResult expectedResult) {
-        JobResult result = buildSession.build(command);
-        assertThat(buildInfo(), result, is(expectedResult));
-
-    }
-
-    private void runBuild(BuildCommand command, JobResult expectedResult) {
-        runBuild(newBuildSession(), command, expectedResult);
-    }
-
 
     private BuildCommand execEchoEnv(final String envname) {
         if (SystemUtil.isWindows()) {

@@ -16,17 +16,13 @@
 
 package com.thoughtworks.go.domain.builder;
 
-import com.thoughtworks.go.buildsession.BuildSessionBasedTest;
+import com.thoughtworks.go.buildsession.BuildSessionBasedTestCase;
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.util.*;
-import org.apache.commons.io.FileUtils;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.zip.Deflater;
 
 import static java.lang.String.format;
@@ -35,7 +31,7 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertThat;
 
-public class FetchArtifactBuilderBuildCommandTest extends BuildSessionBasedTest {
+public class FetchArtifactBuilderBuildCommandTest extends BuildSessionBasedTestCase {
     private File zip;
 
     @Before

@@ -1,7 +1,9 @@
 package com.thoughtworks.go.buildsession;
 
 import com.thoughtworks.go.domain.ArtifactsRepositoryStub;
+import com.thoughtworks.go.domain.BuildCommand;
 import com.thoughtworks.go.domain.BuildStateReporterStub;
+import com.thoughtworks.go.domain.JobResult;
 import com.thoughtworks.go.remote.work.HttpServiceStub;
 import com.thoughtworks.go.util.TestFileUtil;
 import com.thoughtworks.go.util.TestingClock;
@@ -16,7 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-public class BuildSessionBasedTest {
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+
+public class BuildSessionBasedTestCase {
     protected BuildStateReporterStub statusReporter;
     protected Map<String, String> buildVariables;
     protected File sandbox;
@@ -55,4 +60,14 @@ public class BuildSessionBasedTest {
                 + console.output()
                 + "\n******";
     }
+
+    protected void runBuild(BuildSession buildSession, BuildCommand command, JobResult expectedResult) {
+        JobResult result = buildSession.build(command);
+        assertThat(buildInfo(), result, is(expectedResult));
+    }
+
+    protected void runBuild(BuildCommand command, JobResult expectedResult) {
+        runBuild(newBuildSession(), command, expectedResult);
+    }
 }
+

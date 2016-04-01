@@ -18,7 +18,7 @@ package com.thoughtworks.go.domain;
 import com.googlecode.junit.ext.JunitExtRunner;
 import com.googlecode.junit.ext.RunIf;
 import com.thoughtworks.go.buildsession.BuildSession;
-import com.thoughtworks.go.buildsession.BuildSessionBasedTest;
+import com.thoughtworks.go.buildsession.BuildSessionBasedTestCase;
 import com.thoughtworks.go.config.ConfigCache;
 import com.thoughtworks.go.config.CruiseConfig;
 import com.thoughtworks.go.config.JobConfig;
@@ -37,7 +37,6 @@ import com.thoughtworks.go.server.service.builders.*;
 import com.thoughtworks.go.util.ConfigElementImplementationRegistryMother;
 import com.thoughtworks.go.util.FileUtil;
 import com.thoughtworks.go.util.SystemUtil;
-import com.thoughtworks.go.util.command.InMemoryConsumer;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -69,7 +68,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 @RunWith(JunitExtRunner.class)
-public class BuildComposerTest extends BuildSessionBasedTest {
+public class BuildComposerTest extends BuildSessionBasedTestCase {
     public static final String PIPELINE_NAME = "pipeline1";
     public static final String PIPELINE_LABEL = "100";
     public static final String STAGE_NAME = "mingle";
@@ -212,8 +211,6 @@ public class BuildComposerTest extends BuildSessionBasedTest {
     private static UpstreamPipelineResolver resolver;
 
     private volatile BuildSession buildSession;
-
-
 
     private static String willUpload(String file) {
         return "<job name=\"" + JOB_PLAN_NAME + "\">\n"

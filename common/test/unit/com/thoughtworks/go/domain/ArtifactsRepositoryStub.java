@@ -19,6 +19,7 @@ import com.thoughtworks.go.buildsession.ArtifactsRepository;
 import com.thoughtworks.go.util.command.StreamConsumer;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,11 +29,19 @@ public class ArtifactsRepositoryStub implements ArtifactsRepository {
     private final List<FileUpload> fileUploaded;
     private RuntimeException error;
 
-
     public static class FileUpload {
         public File file;
         public String destPath;
         public String buildId;
+
+        @Override
+        public String toString() {
+            return "FileUpload{" +
+                    "file=" + file +
+                    ", destPath='" + destPath + '\'' +
+                    ", buildId='" + buildId + '\'' +
+                    '}';
+        }
     }
 
     public ArtifactsRepositoryStub() {
@@ -58,4 +67,12 @@ public class ArtifactsRepositoryStub implements ArtifactsRepository {
         this.error = error;
     }
 
+    public boolean isFileUploaded(File file, String dest) throws IOException {
+        for (FileUpload fileUpload : fileUploaded) {
+            if(file.getCanonicalFile().equals(fileUpload.file.getCanonicalFile()) && dest.equals(fileUpload.destPath)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

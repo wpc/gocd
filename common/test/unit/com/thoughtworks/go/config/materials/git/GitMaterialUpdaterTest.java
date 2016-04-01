@@ -18,7 +18,7 @@ package com.thoughtworks.go.config.materials.git;
 
 import com.googlecode.junit.ext.JunitExtRunner;
 import com.thoughtworks.go.buildsession.BuildSession;
-import com.thoughtworks.go.buildsession.BuildSessionBasedTest;
+import com.thoughtworks.go.buildsession.BuildSessionBasedTestCase;
 import com.thoughtworks.go.domain.JobResult;
 import com.thoughtworks.go.domain.materials.Modification;
 import com.thoughtworks.go.domain.materials.RevisionContext;
@@ -58,7 +58,7 @@ import static org.junit.Assert.assertThat;
 
 @RunWith(JunitExtRunner.class)
 
-public class GitMaterialUpdaterTest extends BuildSessionBasedTest {
+public class GitMaterialUpdaterTest extends BuildSessionBasedTestCase {
     private static final String SUBMODULE = "submodule-1";
 
     private File workingDir;
