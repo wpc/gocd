@@ -118,7 +118,7 @@ public class BuildComposer {
                 srcs.add(ap.getSrc());
             }
         }
-        return srcs.isEmpty() ? noop() : BuildCommand.generateTestReport(srcs, "testoutput");
+        return srcs.isEmpty() ? noop() : BuildCommand.generateTestReport(srcs, "testoutput").setWorkingDirectory(workingDirectory());
     }
 
 

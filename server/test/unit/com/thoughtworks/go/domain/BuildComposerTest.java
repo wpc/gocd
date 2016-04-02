@@ -25,6 +25,7 @@ import com.thoughtworks.go.config.JobConfig;
 import com.thoughtworks.go.config.MagicalGoConfigXmlLoader;
 import com.thoughtworks.go.domain.buildcause.BuildCause;
 import com.thoughtworks.go.domain.builder.Builder;
+import com.thoughtworks.go.domain.exception.ArtifactPublishingException;
 import com.thoughtworks.go.helper.ConfigFileFixture;
 import com.thoughtworks.go.helper.JobInstanceMother;
 import com.thoughtworks.go.helper.StageMother;
@@ -38,13 +39,15 @@ import com.thoughtworks.go.util.ConfigElementImplementationRegistryMother;
 import com.thoughtworks.go.util.FileUtil;
 import com.thoughtworks.go.util.SystemUtil;
 import org.apache.commons.io.IOUtils;
+import org.hamcrest.core.Is;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.springframework.core.io.ClassPathResource;
 
-import java.io.File;
+import java.io.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -58,6 +61,7 @@ import static com.thoughtworks.go.junitext.EnhancedOSChecker.WINDOWS;
 import static com.thoughtworks.go.matchers.ConsoleOutMatcher.*;
 import static com.thoughtworks.go.matchers.RegexMatcher.matches;
 import static com.thoughtworks.go.util.SystemUtil.isWindows;
+import static com.thoughtworks.go.util.TestUtils.copyAndClose;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.StringContains.containsString;
@@ -239,6 +243,19 @@ public class BuildComposerTest extends BuildSessionBasedTestCase {
                 + "  </tasks>\n"
                 + "</job>";
     }
+
+
+    private static String willUploadTestArtifact(String path, String dest) {
+        return "<job name=\"" + JOB_PLAN_NAME + "\">\n"
+                + "   <artifacts>\n"
+                + "      <test src=\"" + path + "\" dest=\"" + dest + "\" />\n"
+                + "   </artifacts>"
+                + "  <tasks>\n"
+                + "    <exec command=\"echo\">\n"
+                + "      <arg>hello world</arg>\n"
+                + "    </exec>\n"
+                + "  </tasks>\n"
+                + "</job>";    }
 
     @Before
     public void setUp() throws Exception {
@@ -501,6 +518,29 @@ public class BuildComposerTest extends BuildSessionBasedTestCase {
         build(willUpload("cruise-output/log.xml"), PIPELINE_NAME, true, false);
         assertThat(statusReporter.results(), containsResult(Failed));
     }
+
+    @Test
+    public void generateReportForNUnit() throws Exception {
+        File basedir = new File(sandbox, "pipelines/pipeline1/test-reports");
+        basedir.mkdirs();
+
+        InputStream nunitResult = new ClassPathResource(FileUtil.fileseparator() + "data" + FileUtil.fileseparator() + "TestResult.xml").getInputStream();
+        FileOutputStream testArtifact = new FileOutputStream(new File(basedir, "test-result.xml"));
+        copyAndClose(nunitResult, testArtifact);
+
+        build(willUploadTestArtifact("test-reports", "test-report-dest"), PIPELINE_NAME, false, false);
+
+        assertThat(artifactsRepository.getFileUploaded().size(), Is.is(2));
+        assertThat(artifactsRepository.getFileUploaded().get(0).file, is(basedir));
+        assertThat(artifactsRepository.getFileUploaded().get(0).destPath, is("test-report-dest"));
+        assertThat(artifactsRepository.getFileUploaded().get(1).destPath, is("testoutput"));
+        assertThat(artifactsRepository.propertyValue(TestReportGenerator.TOTAL_TEST_COUNT), is("206"));
+        assertThat(artifactsRepository.propertyValue(TestReportGenerator.FAILED_TEST_COUNT), is("0"));
+        assertThat(artifactsRepository.propertyValue(TestReportGenerator.IGNORED_TEST_COUNT), is("0"));
+        assertThat(artifactsRepository.propertyValue(TestReportGenerator.TEST_TIME), is("NaN"));
+    }
+
+
 
     private static BuildAssignment getAssigment(String jobXml, String pipelineName, boolean fetchMaterials, boolean cleanWorkingDir) throws Exception {
         CruiseConfig cruiseConfig = new MagicalGoConfigXmlLoader(new ConfigCache(), ConfigElementImplementationRegistryMother.withNoPlugins()).loadConfigHolder(FileUtil.readToEnd(IOUtils.toInputStream(ConfigFileFixture.withJob(jobXml, pipelineName)))).config;
