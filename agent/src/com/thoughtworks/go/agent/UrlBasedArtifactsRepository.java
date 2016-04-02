@@ -39,6 +39,7 @@ import static com.thoughtworks.go.util.GoConstants.PUBLISH_MAX_RETRIES;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.removeStart;
 
+// This class is a replacement for GoArtifactsManipulator, so bear with the duplication for now
 public class UrlBasedArtifactsRepository implements ArtifactsRepository {
     private static final Logger LOGGER = Logger.getLogger(UrlBasedArtifactsRepository.class);
 
@@ -124,15 +125,16 @@ public class UrlBasedArtifactsRepository implements ArtifactsRepository {
     }
 
     private String getPropertiesUrl(String propertyName) {
-        return String.format("%s/%s", propertyBaseUrl, UrlUtil.encodeInUtf8(propertyName));
+        return UrlUtil.concatPath(propertyBaseUrl, UrlUtil.encodeInUtf8(propertyName));
+    }
+
+    private String getUploadUrl(String buildId, String normalizedDestPath, int publishingAttempts) {
+        String path = format("%s?attempt=%d&buildId=%s", UrlUtil.encodeInUtf8(normalizedDestPath), publishingAttempts, buildId);
+        return UrlUtil.concatPath(artifactsBaseUrl, path);
     }
 
     private void consumeLineWithPrefix(StreamConsumer console, String message) {
         console.consumeLine(format("[%s] %s", GoConstants.PRODUCT_NAME, message));
-    }
-
-    private String getUploadUrl(String buildId, String normalizedDestPath, int publishingAttempts) {
-        return format("%s/%s?attempt=%d&buildId=%s", artifactsBaseUrl, UrlUtil.encodeInUtf8(normalizedDestPath), publishingAttempts, buildId);
     }
 
     private String getDestPath(String file) {

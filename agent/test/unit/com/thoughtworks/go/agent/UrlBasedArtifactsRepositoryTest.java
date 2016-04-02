@@ -53,7 +53,7 @@ public class UrlBasedArtifactsRepositoryTest {
         artifactFolder = TestFileUtil.createTempFolder("artifact_folder");
         tempFile = TestFileUtil.createTestFile(artifactFolder, "file.txt");
         console = new InMemoryConsumer();
-        artifactsRepository = new UrlBasedArtifactsRepository(httpService, "http://baseurl/artifacts", "http://baseurl/properties", new ZipUtil());
+        artifactsRepository = new UrlBasedArtifactsRepository(httpService, "http://baseurl/artifacts/", "http://baseurl/properties/", new ZipUtil());
     }
 
     @After
