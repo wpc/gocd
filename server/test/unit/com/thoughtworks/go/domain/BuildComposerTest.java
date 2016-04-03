@@ -25,7 +25,6 @@ import com.thoughtworks.go.config.JobConfig;
 import com.thoughtworks.go.config.MagicalGoConfigXmlLoader;
 import com.thoughtworks.go.domain.buildcause.BuildCause;
 import com.thoughtworks.go.domain.builder.Builder;
-import com.thoughtworks.go.domain.exception.ArtifactPublishingException;
 import com.thoughtworks.go.helper.ConfigFileFixture;
 import com.thoughtworks.go.helper.JobInstanceMother;
 import com.thoughtworks.go.helper.StageMother;
@@ -38,6 +37,7 @@ import com.thoughtworks.go.server.service.builders.*;
 import com.thoughtworks.go.util.ConfigElementImplementationRegistryMother;
 import com.thoughtworks.go.util.FileUtil;
 import com.thoughtworks.go.util.SystemUtil;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.hamcrest.core.Is;
 import org.junit.After;
@@ -47,7 +47,9 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.springframework.core.io.ClassPathResource;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -255,7 +257,23 @@ public class BuildComposerTest extends BuildSessionBasedTestCase {
                 + "      <arg>hello world</arg>\n"
                 + "    </exec>\n"
                 + "  </tasks>\n"
-                + "</job>";    }
+                + "</job>";
+    }
+
+    private String willGenerateProperties(String src, String propertyName, String xpath) {
+        return "<job name=\"" + JOB_PLAN_NAME + "\">\n"
+                + "   <properties>\n"
+                + "      <property name=\"" + propertyName + "\" src=\"" + src + "\" xpath=\"" +  xpath + "\" />\n"
+                + "   </properties>"
+                + "  <tasks>\n"
+                + "    <exec command=\"echo\">\n"
+                + "      <arg>hello world</arg>\n"
+                + "    </exec>\n"
+                + "  </tasks>\n"
+                + "</job>";
+    }
+
+
 
     @Before
     public void setUp() throws Exception {
@@ -540,7 +558,20 @@ public class BuildComposerTest extends BuildSessionBasedTestCase {
         assertThat(artifactsRepository.propertyValue(TestReportGenerator.TEST_TIME), is("NaN"));
     }
 
-
+    @Test
+    public void generateBuildPropertyUsingXPath() throws Exception {
+        File basedir = new File(sandbox, "pipelines/pipeline1");
+        String content = "<artifacts>\n"
+                + "         <artifact src=\"target\\connectfour.jar\" dest=\"dist\\jars\" />\n"
+                + "         <artifact src=\"target\\test-results\" dest=\"testoutput\" type=\"junit\" />\n"
+                + "         <artifact src=\"build.xml\" />\n"
+                + "       </artifacts>\n";
+        File file = new File(basedir, "xmlfile");
+        FileUtils.writeStringToFile(file, content, "UTF-8");
+        build(willGenerateProperties("xmlfile", "artifactsrc", "//artifact/@src"), PIPELINE_NAME, false, false);
+        assertThat(buildInfo(), getLast(statusReporter.results()), is(Passed));
+        assertThat(artifactsRepository.propertyValue("artifactsrc"), is("target\\connectfour.jar"));
+    }
 
     private static BuildAssignment getAssigment(String jobXml, String pipelineName, boolean fetchMaterials, boolean cleanWorkingDir) throws Exception {
         CruiseConfig cruiseConfig = new MagicalGoConfigXmlLoader(new ConfigCache(), ConfigElementImplementationRegistryMother.withNoPlugins()).loadConfigHolder(FileUtil.readToEnd(IOUtils.toInputStream(ConfigFileFixture.withJob(jobXml, pipelineName)))).config;

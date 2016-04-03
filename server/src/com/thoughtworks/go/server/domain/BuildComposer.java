@@ -16,6 +16,7 @@
 package com.thoughtworks.go.server.domain;
 
 import com.thoughtworks.go.config.ArtifactPlan;
+import com.thoughtworks.go.config.ArtifactPropertiesGenerator;
 import com.thoughtworks.go.config.materials.Materials;
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.builder.Builder;
@@ -63,11 +64,27 @@ public class BuildComposer {
                 reportAction("Start to build"),
                 reportCurrentStatus(Building),
                 runBuilders(),
-                reportCompleting().runIf("any"),
-                reportCurrentStatus(Completing).runIf("any"),
-                reportAction("Start to create properties").runIf("any"),
-                uploadArtifacts().setRunIfRecurisvely("any"));
+                BuildCommand.compose(
+                        reportCompleting(),
+                        reportCurrentStatus(Completing),
+                        harvestProperties(),
+                        uploadArtifacts()).setRunIfRecurisvely("any"));
     }
+
+
+    private BuildCommand harvestProperties() {
+        List<ArtifactPropertiesGenerator> generators = assignment.getPlan().getPropertyGenerators();
+        List<BuildCommand> commands = new ArrayList<>();
+
+        for (ArtifactPropertiesGenerator generator : generators) {
+            BuildCommand command = BuildCommand.generateProperty(generator.getName(), generator.getSrc(), generator.getXpath()).setWorkingDirectory(workingDirectory());
+            commands.add(command);
+        }
+        return BuildCommand.compose(
+                reportAction("Start to create properties"),
+                BuildCommand.compose(commands));
+    }
+
 
     private BuildCommand runBuilders() {
         List<BuildCommand> commands = new ArrayList<>();

@@ -122,6 +122,11 @@ public class BuildCommand {
         return new BuildCommand("downloadDir", args);
     }
 
+
+    public static BuildCommand generateProperty(String name, String src, String xpath) {
+        return new BuildCommand("generateProperty", map("name", name, "src", src, "xpath", xpath));
+    }
+
     @Expose
     private final String name;
     @Expose
@@ -331,4 +336,5 @@ public class BuildCommand {
             return defaultValue;
         }
     }
+
 }

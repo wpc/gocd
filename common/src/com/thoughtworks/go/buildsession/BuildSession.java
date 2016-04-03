@@ -72,6 +72,7 @@ public class BuildSession {
         executors.put("reportCurrentStatus", new ReportCurrentStatusCommandExecutor());
         executors.put("reportCompleting", new ReportCompletingCommandExecutor());
         executors.put("generateTestReport", new GenerateTestReportCommandExecutor());
+        executors.put("generateProperty", new GeneratePropertyCommandExecutor());
     }
 
     public BuildSession(String buildId, BuildStateReporter buildStateReporter, StreamConsumer console, StrLookup buildVariables, ArtifactsRepository artifactsRepository, HttpService httpService, Clock clock, File workingDir) {
@@ -140,6 +141,7 @@ public class BuildSession {
         BuildCommandExecutor executor = executors.get(command.getName());
         if (executor == null) {
             LOG.error("Unknown command: " + command.getName());
+            println("error: build command " + command.getName() + " is not supported. Please upgrade GoCD agent");
             buildResult = JobResult.Failed;
             return false;
         }
