@@ -53,8 +53,6 @@ public class BuildComposer {
         return BuildCommand.compose(
                 reportAction("Start to prepare"),
                 reportCurrentStatus(Preparing),
-                setupSecrets(),
-                setupEnvironmentVariables(),
                 refreshWorkingDir(),
                 updateMaterials());
     }
@@ -63,6 +61,8 @@ public class BuildComposer {
         return BuildCommand.compose(
                 reportAction("Start to build"),
                 reportCurrentStatus(Building),
+                setupSecrets(),
+                setupEnvironmentVariables(),
                 runBuilders(),
                 BuildCommand.compose(
                         reportCompleting(),
