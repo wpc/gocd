@@ -60,8 +60,8 @@ public class BuildSessionTest extends BuildSessionBasedTestCase {
 
     @Test
     public void echoCommandAppendContentToConsole() {
-        runBuild(echo("o1", "o2"), Passed);
-        assertThat(console.asList(), is(Arrays.asList("o1", "o2")));
+        runBuild(echo("o1o2"), Passed);
+        assertThat(console.asList(), is(Collections.singletonList("o1o2")));
     }
 
     @Test

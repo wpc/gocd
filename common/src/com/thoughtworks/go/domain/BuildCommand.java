@@ -30,8 +30,8 @@ public class BuildCommand {
 
     private static final Gson GSON = new Gson();
 
-    public static BuildCommand echoWithPrefix(String format, String...args) {
-        return echo(String.format("[%s] " + format, ArrayUtil.pushToArray(GoConstants.PRODUCT_NAME, args)));
+    public static BuildCommand echoWithPrefix(String format, Object...args) {
+        return echo("[%s] " + format, ArrayUtil.pushToArray(GoConstants.PRODUCT_NAME, args));
     }
 
     public static BuildCommand exec(String command, String...args) {
@@ -63,8 +63,8 @@ public class BuildCommand {
         return new BuildCommand("compose").setSubCommands(subCommands);
     }
 
-    public static BuildCommand echo(String...args) {
-        return new BuildCommand("echo", map("lines", GSON.toJson(args)));
+    public static BuildCommand echo(String format, Object...args) {
+        return new BuildCommand("echo", map("line", String.format(format, args)));
     }
 
     public static BuildCommand mkdirs(String path) {

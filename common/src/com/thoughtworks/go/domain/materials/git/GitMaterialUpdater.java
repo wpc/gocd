@@ -58,8 +58,8 @@ public class GitMaterialUpdater {
 
     private BuildCommand resetWorkingCopy(String workingDir, Revision revision) {
         return compose(
-                echo(format("[GIT] Reset working directory %s", workingDir)),
-                echo(format("[GIT] Updating working copy to revision %s", revision.getRevision())),
+                echo("[GIT] Reset working directory %s", workingDir),
+                echo("[GIT] Updating working copy to revision %s", revision.getRevision()),
                 cleanupUnversionedFiles(workingDir),
                 resetHard(workingDir, revision),
                 updateSubmodules(workingDir),
@@ -106,7 +106,7 @@ public class GitMaterialUpdater {
         int depth = steps[0];
         return compose(
                 compose(
-                        echo(format("[GIT] Unshallowing repository with depth %d", depth)),
+                        echo("[GIT] Unshallowing repository with depth %d", depth),
                         exec("git", "fetch", "origin", format("--depth=%d", depth)).setWorkingDirectory(workingDir),
                         unshallowIfNeeded(workingDir, revision, Arrays.copyOfRange(steps, 1, steps.length))
                 ).setTest(revisionNotExists(workingDir, revision))

@@ -20,9 +20,8 @@ import com.thoughtworks.go.domain.BuildCommand;
 public class EchoCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        for (String line : command.getArrayArg("lines")) {
-            buildSession.println(buildSession.buildVariableSubstitude(line));
-        }
+        String line = command.getStringArg("line");
+        buildSession.println(buildSession.buildVariableSubstitude(line));
         return true;
     }
 }
