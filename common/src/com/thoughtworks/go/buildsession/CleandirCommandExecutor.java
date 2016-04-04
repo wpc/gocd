@@ -29,7 +29,7 @@ public class CleandirCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
         File dir = buildSession.resolveRelativeDir(command.getWorkingDirectory(), command.getStringArg("path"));
-        String[] allowed = command.getJsonArg("allowed", String[].class, new String[]{});
+        String[] allowed = command.getArrayArg("allowed");
         if (allowed.length == 0) {
             try {
                 FileUtils.cleanDirectory(dir);

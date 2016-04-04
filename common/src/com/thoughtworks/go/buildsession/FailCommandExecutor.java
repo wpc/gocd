@@ -20,7 +20,9 @@ import com.thoughtworks.go.domain.BuildCommand;
 public class FailCommandExecutor implements BuildCommandExecutor {
     @Override
     public boolean execute(BuildCommand command, BuildSession buildSession) {
-        buildSession.println(command.getListArgs()[0]);
+        if (command.hasArg("message")) {
+            buildSession.println(command.getStringArg("message"));
+        }
         return false;
     }
 }

@@ -18,7 +18,9 @@ package com.thoughtworks.go.domain;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.Expose;
+import com.thoughtworks.go.util.ArrayUtil;
 import com.thoughtworks.go.util.GoConstants;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.util.*;
 
@@ -29,15 +31,11 @@ public class BuildCommand {
     private static final Gson GSON = new Gson();
 
     public static BuildCommand echoWithPrefix(String format, String...args) {
-        String prefix = String.format("[%s] ", GoConstants.PRODUCT_NAME);
-        return new BuildCommand("echo", prefix + String.format(format, args));
+        return echo(String.format("[%s] " + format, ArrayUtil.pushToArray(GoConstants.PRODUCT_NAME, args)));
     }
 
     public static BuildCommand exec(String command, String...args) {
-        String[] combinedArgs = new String[args.length + 1];
-        combinedArgs[0] = command;
-        System.arraycopy(args, 0, combinedArgs, 1, args.length);
-        return new BuildCommand("exec", combinedArgs);
+        return new BuildCommand("exec", map("command", command, "args", GSON.toJson(args)));
     }
 
     public static BuildCommand test(String flag, String left) {
@@ -66,7 +64,7 @@ public class BuildCommand {
     }
 
     public static BuildCommand echo(String...args) {
-        return new BuildCommand("echo", args);
+        return new BuildCommand("echo", map("lines", GSON.toJson(args)));
     }
 
     public static BuildCommand mkdirs(String path) {
@@ -82,7 +80,7 @@ public class BuildCommand {
     }
 
     public static BuildCommand fail(String format, String... args) {
-        return new BuildCommand("fail", String.format(format, args));
+        return new BuildCommand("fail", map("message", String.format(format, args)));
     }
 
     // set environment variable with displaying it
@@ -148,11 +146,6 @@ public class BuildCommand {
         this.args = Collections.emptyMap();
     }
 
-    public BuildCommand(String name, String... listArgs) {
-        this(name);
-        this.args = toMapArgs(listArgs);
-    }
-
     public BuildCommand(String name, Map<String, String> args) {
         this(name);
         this.args = args;
@@ -162,20 +155,8 @@ public class BuildCommand {
         return name;
     }
 
-    public Map<String, String> getArgs() {
-        return args;
-    }
-
     public boolean hasArg(String arg) {
         return args.containsKey(arg);
-    }
-
-    public String[] getListArgs() {
-        String[] ret = new String[args.size()];
-        for (int i = 0; i < ret.length; i++) {
-            ret[i] = args.get(String.valueOf(i));
-        }
-        return ret;
     }
 
     public String dump() {
@@ -313,14 +294,6 @@ public class BuildCommand {
         return this;
     }
 
-    private Map<String, String> toMapArgs(String[] listArgs) {
-        HashMap<String, String> ret = new HashMap<>(listArgs.length);
-        for (int i = 0; i < listArgs.length; i++) {
-            ret.put(String.valueOf(i), listArgs[i]);
-        }
-        return ret;
-    }
-
     public boolean getBooleanArg(String arg) {
         return args.containsKey(arg) ? Boolean.valueOf(args.get(arg)) : false;
     }
@@ -329,12 +302,11 @@ public class BuildCommand {
         return args.get(arg);
     }
 
-    public <T> T getJsonArg(String arg, Class<T> clazz, T defaultValue) {
-        if (hasArg(arg)) {
-            return GSON.fromJson(args.get(arg), clazz);
-        } else {
-            return defaultValue;
-        }
-    }
 
+    public String[] getArrayArg(String arg) {
+        if (!hasArg(arg)) {
+            return new String[]{};
+        }
+        return GSON.fromJson(args.get(arg), String[].class);
+    }
 }

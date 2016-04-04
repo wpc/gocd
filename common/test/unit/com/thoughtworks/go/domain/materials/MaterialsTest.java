@@ -294,7 +294,7 @@ public class MaterialsTest {
         BuildCommand command = materials.cleanUpCommand("basedir");
         assertThat(command.getName(), is("cleandir"));
         assertThat(command.getStringArg("path"), is("basedir"));
-        assertThat(command.getJsonArg("allowed", String[].class, null), is(new String[]{"some-folder", "cruise-output"}));
+        assertThat(command.getArrayArg("allowed"), is(new String[]{"some-folder", "cruise-output"}));
     }
 
     @Test

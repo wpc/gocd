@@ -16,6 +16,7 @@
 
 package com.thoughtworks.go.domain;
 
+import com.google.gson.Gson;
 import com.thoughtworks.go.websocket.MessageEncoding;
 import org.junit.Test;
 
@@ -27,9 +28,7 @@ public class BuildCommandTest {
 
     @Test
     public void testGetArgs() {
-        assertThat(new BuildCommand("foo").getArgs().size(), is(0));
-        assertThat(new BuildCommand("foo", "arg1", "arg2").getArgs(), is(map("0", "arg1", "1", "arg2")));
-        assertThat(new BuildCommand("foo", "arg1", "arg2").getListArgs(), is(new String[]{"arg1","arg2"}));
+        assertThat(new BuildCommand("foo", map("foo", new Gson().toJson(new String[]{"arg1", "arg2"}))).getArrayArg("foo"), is(new String[]{"arg1","arg2"}));
         assertThat(new BuildCommand("foo", map("foo", "true")).getBooleanArg("foo"), is(true));
         assertThat(new BuildCommand("foo", map("foo", "true")).getBooleanArg("bar"), is(false));
         assertThat(new BuildCommand("foo", map("foo", "bar")).getStringArg("foo"), is("bar"));
@@ -39,7 +38,7 @@ public class BuildCommandTest {
     @Test
     public void defaultSubCommandsShouldBeEmpty() {
         assertThat(new BuildCommand("foo").getSubCommands().size(), is(0));
-        assertThat(new BuildCommand("foo", "args1").getSubCommands().size(), is(0));
+        assertThat(new BuildCommand("foo", map("arg1", "42")).getSubCommands().size(), is(0));
     }
 
     @Test
@@ -55,7 +54,7 @@ public class BuildCommandTest {
 
     @Test
     public void encodeDecode() {
-        BuildCommand bc = BuildCommand.compose(new BuildCommand("bar1", "arg1", "arg2"), BuildCommand.compose(new BuildCommand("barz")));
+        BuildCommand bc = BuildCommand.compose(new BuildCommand("bar1", map("arg1", "1", "arg2", "2")), BuildCommand.compose(new BuildCommand("barz")));
         bc.setRunIfConfig("any");
         bc.setTest(new BuildCommand("t", map("k1", "v1")));
         bc.setOnCancel(BuildCommand.compose(BuildCommand.echo("foo"), BuildCommand.echo("bar")));

@@ -35,7 +35,7 @@ public class GenerateTestReportCommandExecutor implements BuildCommandExecutor {
     public boolean execute(BuildCommand command, BuildSession buildSession) {
         File workingDirectory = buildSession.resolveRelativeDir(command.getWorkingDirectory());
         String uploadPath = command.getStringArg("uploadPath");
-        String[] sources = command.getJsonArg("srcs", String[].class, new String[]{});
+        String[] sources = command.getArrayArg("srcs");
         ArrayList<File> allFiles = findMatchedSourceFiles(buildSession, workingDirectory, sources);
         if (allFiles.size() > 0) {
             File tempFolder = null;

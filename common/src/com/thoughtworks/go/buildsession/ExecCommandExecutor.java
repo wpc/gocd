@@ -47,29 +47,23 @@ public class ExecCommandExecutor implements BuildCommandExecutor {
             return false;
         }
 
-        String[] args = command.getListArgs();
+        String cmd = command.getStringArg("command");
+        String[] args = command.getArrayArg("args");
         CommandLine commandLine;
 
         if (SystemUtil.isWindows()) {
             commandLine = CommandLine.createCommandLine("cmd");
             commandLine.withArg("/c");
-            commandLine.withArg(StringUtils.replace(args[0], "/", "\\"));
+            commandLine.withArg(StringUtils.replace(cmd, "/", "\\"));
         } else {
-            commandLine = CommandLine.createCommandLine(args[0]);
+            commandLine = CommandLine.createCommandLine(cmd);
         }
-
         commandLine.withWorkingDir(workingDir);
-
         commandLine.withEnv(buildSession.getEnvs());
-
-        for (int i = 1; i < args.length; i++) {
-            commandLine.withArg(new StringArgument(args[i]));
-        }
-
+        commandLine.withArgs(args);
         for (SecretSubstitution secretSubstitution : buildSession.getSecretSubstitutions()) {
             commandLine.withNonArgSecret(secretSubstitution);
         }
-
         return executeCommandLine(buildSession, commandLine) == 0;
     }
 
