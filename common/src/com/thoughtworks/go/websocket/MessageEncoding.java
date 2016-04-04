@@ -15,15 +15,20 @@
  * ************************GO-LICENSE-END***********************************/
 package com.thoughtworks.go.websocket;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
+import com.thoughtworks.go.domain.AgentRuntimeStatus;
+import com.thoughtworks.go.remote.AgentIdentifier;
 import com.thoughtworks.go.remote.work.Work;
+import com.thoughtworks.go.server.service.AgentBuildingInfo;
+import com.thoughtworks.go.server.service.AgentRuntimeInfo;
+import com.thoughtworks.go.server.service.ElasticAgentRuntimeInfo;
+import com.thoughtworks.go.util.StringUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -31,7 +36,7 @@ import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 
 public class MessageEncoding {
 
-    private static Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+    private static Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().registerTypeAdapter(AgentRuntimeInfo.class, new AgentRuntimeInfoTypeAdapter()).create();
 
     public static String encodeWork(Work work) {
         try {
@@ -56,7 +61,6 @@ public class MessageEncoding {
             throw bomb(e);
         }
     }
-
 
     public static byte[] encodeMessage(Message msg) {
         String encode = gson.toJson(msg);
@@ -87,5 +91,37 @@ public class MessageEncoding {
 
     public static <T> T decodeData(String data, Class<T> aClass) {
         return gson.fromJson(data, aClass);
+    }
+
+    // todo: Remove hand wrote deserialization after merging ElasticAgentRuntimeInfo class into AgentRuntimeInfo (@wpc)
+    private static class AgentRuntimeInfoTypeAdapter implements JsonDeserializer<AgentRuntimeInfo> {
+        @Override
+        public AgentRuntimeInfo deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            JsonObject jsonObject = json.getAsJsonObject();
+
+            AgentIdentifier identifier = context.deserialize(jsonObject.get("identifier"), AgentIdentifier.class);
+            AgentRuntimeStatus runtimeStatus = context.deserialize(jsonObject.get("runtimeStatus"), AgentRuntimeStatus.class);
+            AgentBuildingInfo buildingInfo = context.deserialize(jsonObject.get("buildingInfo"), AgentBuildingInfo.class);
+            String location = jsonObject.has("location") ? jsonObject.get("location").getAsString() : null;
+            Long usableSpace = jsonObject.has("usableSpace") ? jsonObject.get("usableSpace").getAsLong() : null;
+            String operatingSystemName = jsonObject.has("operatingSystemName") ? jsonObject.get("operatingSystemName").getAsString() : null;
+            String cookie = jsonObject.has("cookie") ? jsonObject.get("cookie").getAsString() : null;
+            String agentLauncherVersion = jsonObject.has("agentLauncherVersion") ? jsonObject.get("agentLauncherVersion").getAsString() : null;
+            boolean supportsBuildCommandProtocol = jsonObject.has("supportsBuildCommandProtocol") && jsonObject.get("supportsBuildCommandProtocol").getAsBoolean();
+            String elasticPluginId = jsonObject.has("elasticPluginId") ? jsonObject.get("elasticPluginId").getAsString() : null;
+            String elasticAgentId = jsonObject.has("elasticAgentId") ? jsonObject.get("elasticAgentId").getAsString() : null;
+
+            AgentRuntimeInfo info;
+            if (elasticPluginId == null || StringUtil.isBlank(elasticPluginId)) {
+                info = new AgentRuntimeInfo(identifier, runtimeStatus, location, cookie, agentLauncherVersion, supportsBuildCommandProtocol);
+            } else {
+                info = new ElasticAgentRuntimeInfo(identifier, runtimeStatus, location, cookie, agentLauncherVersion, elasticAgentId, elasticPluginId);
+            }
+            info.setUsableSpace(usableSpace);
+            info.setOperatingSystem(operatingSystemName);
+            info.setSupportsBuildCommandProtocol(supportsBuildCommandProtocol);
+            info.setBuildingInfo(buildingInfo);
+            return info;
+        }
     }
 }
