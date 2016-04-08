@@ -36,7 +36,7 @@
         #set($show_action_bar_in_breadcrumbs = "pipeline/_pipeline_action_bar")
         #parse("shared/_breadcrumbs.vm")
         <!-- /breadcrumbs -->
-        
+
         #parse("shared/_page_intro_top.vm")
         <p>This view shows you the most recent build activities happening in each stage of every pipeline in Cruise.
            A stage in a pipeline can only have one activity occurring at one time; as a result,
@@ -64,12 +64,16 @@
     var pipelineActions = new PipelineActions();
     var stageActions = new StageActions();
     var pipelineSelector = new PipelineSelector();
-    var dashboard_periodical_executer = new DashboardPeriodicalExecuter('pipelineStatus.json');
 
-    var pipelineObserver = new PipelineObserver('pipelines');
-    dashboard_periodical_executer.register(pipelineObserver);
+    jQuery(function(){
+        var dashboard_periodical_executer = new DashboardPeriodicalExecuter('pipelineStatus.json');
 
-    dashboard_periodical_executer.start();
+        var pipelineObserver = new PipelineObserver('pipelines');
+        dashboard_periodical_executer.register(pipelineObserver);
+
+        dashboard_periodical_executer.start();
+    });
+
 </script>
 
 #parse("shared/_footer.vm")

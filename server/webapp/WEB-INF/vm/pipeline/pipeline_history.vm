@@ -76,15 +76,17 @@
     var stageActions = new StageActions();
     var paginator = new Paginator();
 
-    var dashboard_periodical_executer = new DashboardPeriodicalExecuter('pipelineHistory.json?pipelineName=$pipelineName');
-    var pipelineHistoryObserver = new PipelineHistoryObserver('history');
-    dashboard_periodical_executer.register(pipelineHistoryObserver);
+    jQuery(function(){
+        var dashboard_periodical_executer = new DashboardPeriodicalExecuter('pipelineHistory.json?pipelineName=$pipelineName');
+        var pipelineHistoryObserver = new PipelineHistoryObserver('history');
+        dashboard_periodical_executer.register(pipelineHistoryObserver);
 
-    dashboard_periodical_executer.start();
+        dashboard_periodical_executer.start();
+        #if($pipeline_comment_feature_toggle_key)
+        var PipelineHistoryComment = initPipelineHistoryComment(jQuery, Modalbox, dashboard_periodical_executer);
+        #end
+    });
 
-    #if($pipeline_comment_feature_toggle_key)
-    var PipelineHistoryComment = initPipelineHistoryComment(jQuery, Modalbox, dashboard_periodical_executer);
-    #end
 </script>
 
 #parse("shared/_footer.vm")
